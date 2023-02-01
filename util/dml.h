@@ -4,14 +4,18 @@
 
 #pragma once
 
+#define min(a,b) ((a)<(b)?(a):(b))
+#define max(a,b) ((a)>(b)?(a):(b))
+//#define abs(x) ((x)>0?(x):-(x))
+
 typedef struct {
     float x;
     float y;
 } Vector;
 
-#define min(a,b) ((a)<(b)?(a):(b))
-#define max(a,b) ((a)>(b)?(a):(b))
-#define abs(x) ((x)>0?(x):-(x))
+typedef struct {
+    float data[9];
+} Matrix;
 
 /**
  * Lerp function
@@ -81,6 +85,15 @@ Vector vector_mul_components(Vector a, Vector b);
 Vector vector_div_components(Vector a, Vector b);
 
 /**
+ * Rotate vector
+ *
+ * @param a Vector
+ * @param degrees Degrees
+ * @return  Resulting vector
+ */
+Vector vector_rotate(Vector a, float degrees);
+
+/**
  * Calculating Vector length
  *
  * @param a Direction vector
@@ -114,3 +127,18 @@ float vector_distance(Vector a, Vector b);
  * @return  value from -1 to 1
  */
 float vector_dot(Vector a, Vector b);
+
+
+Matrix identity_matrix();
+
+Matrix scale_matrix(const Vector *scale);
+
+Matrix translation_matrix(const Vector *pos);
+
+Matrix rotation_matrix(float angle);
+
+Matrix matrix_multiply(const Matrix *a, const Matrix *b);
+
+Vector get_matrix_translation(const Matrix *m);
+
+Vector matrix_mul_vector(const Matrix *a, const Vector *v);

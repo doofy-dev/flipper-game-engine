@@ -1,5 +1,6 @@
 #include "dml.h"
 #include <math.h>
+#include <furi.h>
 
 float lerp(float v0, float v1, float t) {
     if (t > 1) return v1;
@@ -57,4 +58,80 @@ float vector_dot(Vector a, Vector b) {
     Vector _a = vector_normalized(a);
     Vector _b = vector_normalized(b);
     return _a.x * _b.x + _a.y * _b.y;
+}
+
+Vector vector_rotate(Vector a, float degrees) {
+    return (Vector) {
+            (float) cos(degrees) * a.x - (float) sin(degrees) * a.y,
+            (float) sin(degrees) * a.x + (float) cos(degrees) * a.y,
+    };
+}
+
+Matrix identity_matrix() {
+    return (Matrix) {
+            .data={
+                    1, 0, 0,
+                    0, 1, 0,
+                    0, 0, 1,
+            }
+    };
+}
+
+Matrix translation_matrix(const Vector *pos) {
+    return (Matrix) {
+            .data={
+                    1, 0, pos->x,
+                    0, 1, pos->y,
+                    0, 0, 1
+            }
+    };
+}
+
+Matrix scale_matrix(const Vector *scale) {
+    return (Matrix) {
+            .data={
+                    scale->x, 0, 0,
+                    0, scale->y, 0,
+                    0, 0, 1
+            }
+    };
+}
+
+Matrix rotation_matrix(float angle) {
+    return (Matrix) {
+            .data={
+                    (float) cos(angle), -(float) sin(angle), 0,
+                    (float) sin(angle), (float) cos(angle), 0,
+                    0, 0, 1,
+            }
+    };
+}
+
+Matrix matrix_multiply(const Matrix *a, const Matrix *b) {
+    Matrix m = (Matrix) {.data={0, 0, 0, 0, 0, 0, 0, 0, 0}};
+    for (uint8_t row = 0; row < 3; row++) {
+        for (uint8_t col = 0; col < 3; col++) {
+            for (uint8_t i = 0; i < 3; i++) {
+                m.data[row * 3 + col] += a->data[row * 3 + i] * b->data[i * 3 + col];
+            }
+        }
+    }
+    return m;
+}
+
+Vector get_matrix_translation(const Matrix *m) {
+    return (Vector) {m->data[2], m->data[5]};
+}
+
+Vector matrix_mul_vector(const Matrix *a, const Vector *v) {
+    float r[3] = {0, 0, 0};
+    float vec[3] = {v->x, v->y, 1};
+    for (uint8_t row = 0; row < 3; row++) {
+        for (uint8_t col = 0; col < 3; col++) {
+            for (uint8_t i = 0; i < 3; i++) {
+                r[row] += a->data[row * 3 + i] * vec[i];
+            }
+        }
+    }
+    return (Vector) {vec[0], vec[1]};
 }

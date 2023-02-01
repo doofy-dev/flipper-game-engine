@@ -7,10 +7,9 @@
 #define SCREEN_HEIGHT 64
 
 typedef enum {
-    Black,
-    White,
+    Default,
     Inverse,
-    Filled  //Currently only for Icon clip drawing
+    Overlay
 } DrawMode;
 
 // size is the screen size
@@ -25,12 +24,14 @@ bool test_pixel(uint8_t *data, uint8_t x, uint8_t y, uint8_t w);
 uint8_t *image_data(Canvas *const canvas, const Icon *icon);
 
 uint32_t pixel_index(uint8_t x, uint8_t y);
+/*
 
 void draw_icon_clip(Canvas *const canvas, const Icon *icon, int16_t x, int16_t y, uint8_t left, uint8_t top, uint8_t w,
                     uint8_t h, DrawMode drawMode);
 
 void draw_icon_clip_flipped(Canvas *const canvas, const Icon *icon, int16_t x, int16_t y, uint8_t left, uint8_t top, uint8_t w,
                     uint8_t h, DrawMode drawMode);
+*/
 
 void draw_rounded_box(Canvas *const canvas, int16_t x, int16_t y, uint8_t w, uint8_t h, DrawMode drawMode);
 
@@ -42,7 +43,7 @@ void invert_rectangle(Canvas *const canvas, int16_t x, int16_t y, uint8_t w, uin
 
 void invert_shape(Canvas *const canvas, uint8_t *data, int16_t x, int16_t y, uint8_t w, uint8_t h);
 
-void draw_pixels(Canvas *const canvas, uint8_t *data, int16_t x, int16_t y, uint8_t w, uint8_t h, DrawMode drawMode);
+void draw_pixels(Canvas *const canvas, const uint8_t *data, int16_t x, int16_t y, uint8_t w, uint8_t h, DrawMode drawMode);
 
 bool read_pixel(Canvas *const canvas, int16_t x, int16_t y);
 

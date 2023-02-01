@@ -1,13 +1,14 @@
 #include "game_engine.h"
+#include "util/ui.h"
 
 EngineState *engineState;
 const char *AppName;
 
-void update_tree(List *items, RenderQueue *render_state, Vector position);
+void update_tree(List *items, RenderQueue *render_state);
 
 static void update(RenderQueue *queue) {
     queue->render_count = 0;
-    update_tree(engineState->scene->entities, queue, (Vector) {0, 0});
+    update_tree(engineState->scene->entities, queue);
 }
 
 static void render(Canvas *const canvas, void *ctx) {
@@ -27,6 +28,7 @@ static void render(Canvas *const canvas, void *ctx) {
             continue;
         }
         canvas_draw_bitmap(canvas, s.position.x, s.position.y, s.image->size.x, s.image->size.y, s.image->data);
+//        draw_pixels(canvas, s.image->data, s.position.x, s.position.y, s.image->size.x, s.image->size.y, Default);
     }
     release_mutex((ValueMutex *) ctx, queue);
 }
@@ -187,7 +189,7 @@ void set_scene(Scene *s) {
     init_tree(s->entities);
 }
 
-void update_tree(List *items, RenderQueue *render_state, Vector position) {
+void update_tree(List *items, RenderQueue *render_state) {
     t_ListItem *curr = items->start;
     if (!curr) return;
     while (curr) {
@@ -199,14 +201,17 @@ void update_tree(List *items, RenderQueue *render_state, Vector position) {
                 c->update(&(c->componentInfo), engineState->gameState);
                 component = component->next;
             }
-            update_tree(e->transform.children, render_state, vector_add(position, e->transform.position));
-        }
-        if (e->draw) {
-            if (render_state->render_count < 63) {
-                render_state->render_list[render_state->render_count].image = &(e->sprite);
-                render_state->render_list[render_state->render_count].position = vector_add(e->transform.position,
-                                                                                            position);
-                render_state->render_count++;
+            if (e->transform.dirty) {
+                update_transform(&(e->transform));
+            }
+            update_tree(e->transform.children, render_state);
+
+            if (e->draw) {
+                if (render_state->render_count < 63) {
+                    render_state->render_list[render_state->render_count].image = &(e->sprite);
+                    render_state->render_list[render_state->render_count].position = get_matrix_translation(&(e->transform.modelMatrix));
+                    render_state->render_count++;
+                }
             }
         }
 
@@ -219,7 +224,7 @@ void exit_app() {
 }
 
 unsigned int delta_tick() {
-    return engineState->tick_delta;
+    return engineState->tick_delta / furi_kernel_get_tick_frequency();
 }
 
 unsigned int frame_tick() {

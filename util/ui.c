@@ -60,6 +60,10 @@ unsigned unsetBit(uint8_t x, uint8_t bit) {
     return x & ~(1 << bit);
 }
 
+unsigned overlay_bit(uint8_t x, uint8_t bit) {
+    return (x & ( 1 << bit )) >> bit;
+}
+
 bool test_pixel(uint8_t *data, uint8_t x, uint8_t y, uint8_t w) {
     uint8_t current_bit = (y % 8);
     uint8_t current_row = ((y - current_bit) / 8);
@@ -96,13 +100,20 @@ void set_pixel(Canvas *const canvas, int16_t x, int16_t y, DrawMode draw_mode) {
         uint8_t* buffer = get_buffer(canvas);
 
         uint8_t current_value = buffer[i];
-        if (draw_mode == Inverse) {
-            buffer[i] = flipBit(current_value, current_bit);
-        } else {
-            if (draw_mode == White) {
-                buffer[i] = unsetBit(current_value, current_bit);
-            } else {
+        bool black=true;//is_black(current_bit);
+        if (draw_mode == Default) {
+            if(black)
                 buffer[i] = setBit(current_value, current_bit);
+            else
+                buffer[i] = unsetBit(current_value, current_bit);
+        }
+        else{
+            if(black){
+                if (draw_mode == Inverse) {
+                    buffer[i] = flipBit(current_value, current_bit);
+                }else{
+                    buffer[i] = setBit(current_value, current_bit);
+                }
             }
         }
     }
@@ -142,10 +153,10 @@ void invert_shape(Canvas *const canvas, uint8_t *data, int16_t x, int16_t y, uin
     draw_pixels(canvas, data, x, y, w, h, Inverse);
 }
 
-void draw_pixels(Canvas *const canvas, uint8_t *data, int16_t x, int16_t y, uint8_t w, uint8_t h, DrawMode drawMode) {
+void draw_pixels(Canvas *const canvas, const uint8_t *data, int16_t x, int16_t y, uint8_t w, uint8_t h, DrawMode drawMode) {
     for (int8_t o = 0; o < w; o++) {
         for (int8_t p = 0; p < h; p++) {
-            if (in_screen(o + x, p + y) && data[p * w + o] == 1)
+            if(data[p * w + o] == 1)    //not correct for packed iamge
                 set_pixel(canvas, o + x, p + y, drawMode);
         }
     }
@@ -182,6 +193,7 @@ uint8_t *getOrAddIconData(Canvas *const canvas, const Icon *icon) {
     }
     return icon_data;
 }
+/*
 
 void draw_icon_clip(Canvas *const canvas, const Icon *icon, int16_t x, int16_t y, uint8_t left, uint8_t top, uint8_t w,
                     uint8_t h, DrawMode drawMode) {
@@ -213,4 +225,4 @@ void draw_icon_clip_flipped(Canvas *const canvas, const Icon *icon, int16_t x, i
                 set_pixel(canvas, x + w - i - 1, y + h - j - 1, drawMode);
         }
     }
-}
+}*/

@@ -15,9 +15,13 @@ entity_t *new_entity(const char *name) {
     e->draw = false;
     e->name = name;
     e->transform.position = (Vector) {0, 0};
+    e->transform.rotation = 0;
+    e->transform.dirty = true;
+    e->transform.scale = (Vector) {1, 1};
     e->components = make_list(sizeof(component_t));
     e->transform.children = make_list(sizeof(transform_t));
     e->transform.entity = e;
+    e->sprite.draw_mode = Default;
     return e;
 }
 
@@ -99,4 +103,67 @@ void add_to_entity(entity_t *parent, entity_t *child) {
 
     list_add(parent->transform.children, child);
     child->transform.parent = parent;
+}
+
+void update_transform(transform_t *t) {
+    t_ListItem *e = t->children->start;
+    t->dirty = false;
+    Matrix translate = translation_matrix(&(t->position));
+    Matrix rotate = rotation_matrix(t->rotation);
+    Matrix scale = scale_matrix(&(t->scale));
+    Matrix tr = matrix_multiply(&translate, &rotate);
+    t->modelMatrix = matrix_multiply(&tr, &scale);
+
+    if (t->parent) {
+        t->modelMatrix = matrix_multiply(&(t->parent->transform.modelMatrix), &(t->modelMatrix));
+    }
+
+    while (e) {
+        update_transform(&(((entity_t *) e->data)->transform));
+        e = e->next;
+    }
+}
+
+void add_position(transform_t *t, Vector amount) {
+    set_position(t, vector_add(t->position, amount));
+}
+
+void set_position(transform_t *t, Vector position) {
+    t->position = position;
+    t->dirty = true;
+}
+
+void add_rotation(transform_t *t, float degree) {
+    set_rotation(t, t->rotation + degree);
+}
+
+void set_rotation(transform_t *t, float degree) {
+    t->rotation = degree;
+    t->dirty = true;
+}
+
+void add_scale(transform_t *t, Vector amount) {
+    set_scale(t, vector_add(t->scale, amount));
+}
+
+void set_scale(transform_t *t, Vector scale) {
+    t->scale=scale;
+    t->dirty=true;
+}
+
+
+Vector world_space_pos(entity_t *e){
+    return (Vector){
+        e->transform.modelMatrix.data[2],
+        e->transform.modelMatrix.data[5]
+    };
+}
+Vector get_position(entity_t *e){
+    return e->transform.position;
+}
+Vector get_scale(entity_t *e){
+    return e->transform.scale;
+}
+float get_rotation(entity_t *e){
+    return e->transform.rotation;
 }
