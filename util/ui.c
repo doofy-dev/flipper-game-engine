@@ -1,3 +1,4 @@
+/*
 #include "ui.h"
 #include <gui/canvas_i.h>
 #include <u8g2_glue.h>
@@ -193,6 +194,7 @@ uint8_t *getOrAddIconData(Canvas *const canvas, const Icon *icon) {
     }
     return icon_data;
 }
+*/
 /*
 
 void draw_icon_clip(Canvas *const canvas, const Icon *icon, int16_t x, int16_t y, uint8_t left, uint8_t top, uint8_t w,

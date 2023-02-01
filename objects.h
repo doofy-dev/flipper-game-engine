@@ -2,7 +2,7 @@
 #include <furi.h>
 #include "util/list.h"
 #include "util/dml.h"
-#include "util/ui.h"
+#include "util/graphics.h"
 
 typedef struct Entity entity_t;
 typedef struct Transform transform_t;

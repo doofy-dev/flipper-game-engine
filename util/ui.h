@@ -1,3 +1,4 @@
+/*
 #pragma once
 
 #include <furi.h>
@@ -24,6 +25,7 @@ bool test_pixel(uint8_t *data, uint8_t x, uint8_t y, uint8_t w);
 uint8_t *image_data(Canvas *const canvas, const Icon *icon);
 
 uint32_t pixel_index(uint8_t x, uint8_t y);
+*/
 /*
 
 void draw_icon_clip(Canvas *const canvas, const Icon *icon, int16_t x, int16_t y, uint8_t left, uint8_t top, uint8_t w,
@@ -31,7 +33,8 @@ void draw_icon_clip(Canvas *const canvas, const Icon *icon, int16_t x, int16_t y
 
 void draw_icon_clip_flipped(Canvas *const canvas, const Icon *icon, int16_t x, int16_t y, uint8_t left, uint8_t top, uint8_t w,
                     uint8_t h, DrawMode drawMode);
-*/
+*//*
+
 
 void draw_rounded_box(Canvas *const canvas, int16_t x, int16_t y, uint8_t w, uint8_t h, DrawMode drawMode);
 
@@ -56,4 +59,4 @@ bool in_screen(int16_t x, int16_t y);
 void ui_cleanup();
 uint8_t* get_buffer(Canvas *const canvas);
 uint8_t* make_buffer();
-void clone_buffer(uint8_t* canvas, uint8_t* data);
+void clone_buffer(uint8_t* canvas, uint8_t* data);*/

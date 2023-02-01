@@ -1,5 +1,5 @@
 #include "game_engine.h"
-#include "util/ui.h"
+#include "util/graphics.h"
 
 EngineState *engineState;
 const char *AppName;
@@ -27,7 +27,8 @@ static void render(Canvas *const canvas, void *ctx) {
             FURI_LOG_E("FlipperGameEngine", "Image render failed because image data is null (ADDR: %p)", s.image->data);
             continue;
         }
-        canvas_draw_bitmap(canvas, s.position.x, s.position.y, s.image->size.x, s.image->size.y, s.image->data);
+        draw_buffer(canvas, s.image->data, s.position.x-s.image->size.x/2, s.position.y-s.image->size.y/2, s.image->size.x, s.image->size.y, BlackOnly);
+//        canvas_draw_bitmap(canvas, s.position.x-s.image->size.x/2, s.position.y-s.image->size.y/2, s.image->size.x, s.image->size.y, s.image->data);
 //        draw_pixels(canvas, s.image->data, s.position.x, s.position.y, s.image->size.x, s.image->size.y, Default);
     }
     release_mutex((ValueMutex *) ctx, queue);
