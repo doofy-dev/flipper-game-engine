@@ -23,7 +23,7 @@ void ui_cleanup() {
 void add_new_tilemap(uint8_t *data, unsigned long iconId) {
     TileMap *old = tileMap;
     tileMapCount++;
-    tileMap = malloc(sizeof(TileMap) * tileMapCount);
+    tileMap = allocate(sizeof(TileMap) * tileMapCount);
     if (tileMapCount > 1) {
         for (uint8_t i = 0; i < tileMapCount; i++)
             tileMap[i] = old[i];
@@ -77,7 +77,7 @@ uint8_t* get_buffer(Canvas *const canvas){
   //  return canvas_get_buffer(canvas);
 }
 uint8_t* make_buffer(){
-    return malloc(sizeof(uint8_t) * 8 * 128);
+    return allocate(sizeof(uint8_t) * 8 * 128);
 }
 void clone_buffer(uint8_t* canvas, uint8_t* data){
     for(int i=0;i<1024;i++){
@@ -178,7 +178,7 @@ void invert_rectangle(Canvas *const canvas, int16_t x, int16_t y, uint8_t w, uin
 }
 
 uint8_t *image_data(Canvas *const canvas, const Icon *icon) {
-    uint8_t *data = malloc(sizeof(uint8_t) * 8 * 128);
+    uint8_t *data = allocate(sizeof(uint8_t) * 8 * 128);
     uint8_t *screen = canvas->fb.tile_buf_ptr;
     canvas->fb.tile_buf_ptr = data;
     canvas_draw_icon(canvas, 0, 0, icon);

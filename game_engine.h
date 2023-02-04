@@ -1,5 +1,4 @@
 #pragma once
-
 #include <input/input.h>
 #include <furi.h>
 #include <dolphin/dolphin.h>
@@ -31,6 +30,7 @@ typedef struct {
 
 typedef struct {
     sprite_t *image;
+    Vector render_scale;
     Vector position;
 } RenderInfo;
 
@@ -40,32 +40,33 @@ typedef struct {
 } RenderQueue;
 
 typedef struct {
+    const char* app_name;
     InputState inputState[7];
     LastInput lastInput;
     unsigned int last_tick;
     unsigned int tick_delta;
     FuriMessageQueue *event_queue;
-    void *gameState;
+    void *game_state;
     ValueMutex render_mutex;
-    RenderQueue *renderQue;
-    NotificationApp *notificationApp;
-    ViewPort *viewPort;
+    RenderQueue *render_queue;
+    NotificationApp *notification_app;
+    ViewPort *viewport;
     FuriTimer *timer;
     Gui *gui;
-    uint8_t *prevFrame;
+    uint8_t *prev_frame;
     bool loaded;
     Scene *scene;
     bool processing;
 } EngineState;
 
 typedef struct {
-    const char *AppName;
-    size_t stateSize;
+    const char* app_name;
+    size_t state_size;
 
-    void (*initState)(void *state);
+    void (*init_state)(void *state);
 
-    bool alwaysOnScreen;
-    uint32_t tickRate;
+    bool always_on_screen;
+    uint32_t tick_rate;
 } SetupState;
 
 

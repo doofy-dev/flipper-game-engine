@@ -7,7 +7,6 @@
 typedef struct Entity entity_t;
 typedef struct Transform transform_t;
 typedef struct Component component_t;
-typedef struct Sprite sprite_t;
 
 struct Transform {
     Vector position;
@@ -32,15 +31,6 @@ struct Component {
 
     void (*update)(ComponentInfo *component, void *game_state);
 };
-
-//multiple sprite type implementation needed
-//maybe scale and rotation??
-struct Sprite{
-    const uint8_t *data;
-    DrawMode draw_mode;
-    Vector size;
-};
-
 
 struct Entity {
     transform_t transform;

@@ -1,16 +1,17 @@
 #include "objects.h"
+#include "util/util.h"
 
 Scene *new_scene(const char *name) {
-    FURI_LOG_D("FlipperGameEngine", "Initializing new scene: %s", name);
-    Scene *s = malloc(sizeof(Scene));
+    FURI_LOG_I("FlipperGameEngine", "Initializing new scene: %s", name);
+    Scene *s = allocate(sizeof(Scene));
     s->name = name;
     s->entities = make_list(sizeof(entity_t));
     return s;
 }
 
 entity_t *new_entity(const char *name) {
-    FURI_LOG_D("FlipperGameEngine", "Initializing new entity: %s", name);
-    entity_t *e = malloc(sizeof(entity_t));
+    FURI_LOG_I("FlipperGameEngine", "Initializing new entity: %s", name);
+    entity_t *e = allocate(sizeof(entity_t));
     e->enabled = true;
     e->draw = false;
     e->name = name;
@@ -19,6 +20,7 @@ entity_t *new_entity(const char *name) {
     e->transform.dirty = true;
     e->transform.scale = (Vector) {1, 1};
     e->components = make_list(sizeof(component_t));
+    e->sprite.anchor = (Vector) {0, 0};
     e->transform.children = make_list(sizeof(transform_t));
     e->transform.entity = e;
     e->sprite.draw_mode = Default;
@@ -32,51 +34,50 @@ void add_to_scene(Scene *s, entity_t *entity) {
 
 void clear_component_data(List *l) {
     t_ListItem *li = l->start;
-    if (li == NULL) return;
-    while (li) {
-        component_t *t = (component_t *) li->data;
-        free(t->componentInfo.data);
-        li = li->next;
+    if (li != NULL) {
+        while (li) {
+            component_t *t = (component_t *) li->data;
+            release(t->componentInfo.data);
+            li = li->next;
+        }
     }
-
     list_free(l);
 }
 
 void clear_branch(List *l) {
-    if (l->count == 0) return;
 
+    if (l == NULL) return;
     t_ListItem *li = l->start;
-    if (li == NULL) return;
-    while (li) {
-        entity_t *t = (entity_t *) li->data;
-        FURI_LOG_D("FlipperGameEngine", "Clearing entity: %s", t->name);
-        clear_branch(t->transform.children);
-        FURI_LOG_D("FlipperGameEngine", "Freeing components");
-        clear_component_data(t->components);
-        li = li->next;
+
+    if (li != NULL) {
+        while (li) {
+            entity_t *t = (entity_t *) li->data;
+            FURI_LOG_I("FlipperGameEngine", "Clearing entity: %s", t->name);
+            clear_branch(t->transform.children);
+            FURI_LOG_I("FlipperGameEngine", "Freeing components");
+            clear_component_data(t->components);
+            li = li->next;
+        }
     }
     list_free(l);
 }
 
 void clear_scene(Scene *scene) {
-    FURI_LOG_D("FlipperGameEngine", "Clearing scene: %s", scene->name);
+    FURI_LOG_I("FlipperGameEngine", "Clearing scene: %s", scene->name);
     if (!scene) return;
-    if (scene->entities) {
-        clear_branch(scene->entities);
-        list_free(scene->entities);
-    }
-    free(scene);
+    clear_branch(scene->entities);
+    release(scene);
 }
 
 void add_component(entity_t *entity, void (*start)(ComponentInfo *component, void *state),
                    void (*update)(ComponentInfo *component, void *state), size_t data_size) {
-    FURI_LOG_D("FlipperGameEngine", "Adding component to: %s", entity->name);
-    component_t *component = (component_t *) malloc(sizeof(component_t));
+    FURI_LOG_I("FlipperGameEngine", "Adding component to: %s", entity->name);
+    component_t *component = (component_t *) allocate(sizeof(component_t));
     component->update = update;
     component->start = start;
     component->componentInfo.entity = entity;
     if (data_size > 0)
-        component->componentInfo.data = malloc(data_size);
+        component->componentInfo.data = allocate(data_size);
     list_add(entity->components, component);
 }
 
@@ -93,6 +94,7 @@ bool is_child_of(entity_t *a, entity_t *b) {
 }
 
 void add_to_entity(entity_t *parent, entity_t *child) {
+    FURI_LOG_D("FlipperGameEngine", "Setting %s parent to be %s", child->name, parent->name);
     if (is_child_of(child, parent)) {
         FURI_LOG_E("FlipperGameEngine", "Cannot add to parent. Child already contains reference to parent!");
         return;
@@ -147,23 +149,25 @@ void add_scale(transform_t *t, Vector amount) {
 }
 
 void set_scale(transform_t *t, Vector scale) {
-    t->scale=scale;
-    t->dirty=true;
+    t->scale = scale;
+    t->dirty = true;
 }
 
-
-Vector world_space_pos(entity_t *e){
-    return (Vector){
-        e->transform.modelMatrix.data[2],
-        e->transform.modelMatrix.data[5]
+Vector world_space_pos(entity_t *e) {
+    return (Vector) {
+            e->transform.modelMatrix.data[2],
+            e->transform.modelMatrix.data[5]
     };
 }
-Vector get_position(entity_t *e){
+
+Vector get_position(entity_t *e) {
     return e->transform.position;
 }
-Vector get_scale(entity_t *e){
+
+Vector get_scale(entity_t *e) {
     return e->transform.scale;
 }
-float get_rotation(entity_t *e){
+
+float get_rotation(entity_t *e) {
     return e->transform.rotation;
 }
