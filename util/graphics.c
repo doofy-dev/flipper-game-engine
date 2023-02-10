@@ -13,11 +13,7 @@ bool in_screen(int16_t x, int16_t y) {
 }
 
 bool test_pixel(const uint8_t *data, uint8_t x, uint8_t y, uint8_t w) {
-    uint8_t current_bit = (y % 8);
-    uint8_t current_row = ((y - current_bit) / 8);
-    uint8_t current_value = data[current_row * w + x];
-
-    return current_value & (1 << current_bit);
+    return data[(y >> 3) * w + x] & (1 << (y & 7));
 }
 
 uint8_t *get_buffer(Canvas *const canvas) {
@@ -25,7 +21,9 @@ uint8_t *get_buffer(Canvas *const canvas) {
 }
 
 uint8_t *make_buffer(uint8_t w, uint8_t h) {
-    return allocate(sizeof(uint8_t) * 8 * w * ceil(h / 8.0));
+    UNUSED(w);
+    UNUSED(h);
+    return allocate(sizeof(uint8_t) * 1024);
 }
 
 void clone_buffer(uint8_t *buf, uint8_t *data) {
@@ -41,110 +39,127 @@ bool read_pixel(Canvas *const canvas, int16_t x, int16_t y) {
     return false;
 }
 
+void draw_color_as_orig(Canvas *const canvas, Vector *const position, sprite_t *const sprite, bool is_black,
+                   PixelColor draw_color, const Vector *scale, float rotation) {
+    UNUSED(rotation);
+    int16_t new_w = round(sprite->size.x * scale->x);
+    int16_t new_h = round(sprite->size.y * scale->y);
 
-void draw_default_mode(Canvas *const canvas, Vector position, const sprite_t *sprite, const Vector *scale) {
-    float new_w = round(sprite->size.x * scale->x);
-    float new_h = round(sprite->size.y * scale->y);
-
-    int16_t offsetX = round(position.x - (sprite->anchor.x * (new_w / 2.0)));
-    int16_t offsetY = round(position.y - (sprite->anchor.y * (new_h / 2.0)));
+    int16_t offsetX = round(position->x - (sprite->anchor.x * (new_w / 2.0)));
+    int16_t offsetY = round(position->y - (sprite->anchor.y * (new_h / 2.0)));
 
     float xInc = sprite->size.x / (float) new_w;
     float yInc = sprite->size.y / (float) new_h;
 
-    uint8_t test_pixel_x = 0;
+    new_w = min(new_w, SCREEN_WIDTH);
+    new_h = min(new_h, SCREEN_HEIGHT);
+    uint16_t test_pixel_x;
     float pixel_x = 0;
-    for (int8_t _x = 0; _x < new_w; _x++) {
-        test_pixel_x = floor(pixel_x);
-        for (int8_t _y = 0; _y < new_h; _y++) {
-            test_pixel_x = floor(pixel_x);
-            float pixel_y = 0;
-            bool isOn = test_pixel(sprite->asset->data, test_pixel_x, floor(pixel_y), sprite->size.x);
+    float pixel_y = 0;
+    bool isOn;
+    int16_t _x, _y;
 
-            int8_t __x = _x + offsetX;
-            int8_t __y = _y + offsetY;
-            if (__x >= 0 && __y >= 0 && __y < SCREEN_HEIGHT)
-                set_pixel(canvas->fb.tile_buf_ptr, __x, __y, SCREEN_WIDTH, isOn ? Black : White);
+    int16_t __x;
+    int8_t __y;
+    for (_x = 0; _x < new_w; _x++) {
+        test_pixel_x = floor(pixel_x);
+        pixel_y = 0;
+        for (_y = 0; _y < new_h; _y++) {
+            __x = _x + offsetX;
+            __y = _y + offsetY;
+
+            if (__y < SCREEN_HEIGHT && __y >= 0 && __x >= 0 && __x < SCREEN_WIDTH) {
+                isOn = test_pixel(sprite->asset->data, test_pixel_x, floor(pixel_y), sprite->size.x) == is_black;
+                if (isOn)
+                    set_pixel(canvas->fb.tile_buf_ptr, __x, __y, SCREEN_WIDTH, draw_color);
+            }
             pixel_y += yInc;
         }
         pixel_x += xInc;
     }
 }
 
-void draw_color_as(Canvas *const canvas, Vector position, const sprite_t *sprite, bool is_black,
-                   PixelColor draw_color, const Vector *scale) {
-    float new_w = round(sprite->size.x * scale->x);
-    float new_h = round(sprite->size.y * scale->y);
+void draw_color_as(uint8_t* canvas, Vector *const position, sprite_t *const sprite, bool is_black,
+                   PixelColor draw_color, const Vector *scale, float rotation) {
+    int16_t new_w = round(sprite->size.x * scale->x);
+    int16_t new_h = round(sprite->size.y * scale->y);
 
-    int16_t offsetX = round(position.x - (sprite->anchor.x * (new_w / 2.0)));
-    int16_t offsetY = round(position.y - (sprite->anchor.y * (new_h / 2.0)));
+    int16_t offsetX = round(position->x - (sprite->anchor.x * (new_w / 2.0)));
+    int16_t offsetY = round(position->y - (sprite->anchor.y * (new_h / 2.0)));
 
     float xInc = sprite->size.x / (float) new_w;
     float yInc = sprite->size.y / (float) new_h;
 
-    uint8_t test_pixel_x = 0;
+    new_w = min(new_w, SCREEN_WIDTH);
+    new_h = min(new_h, SCREEN_HEIGHT);
+    uint16_t test_pixel_x;
     float pixel_x = 0;
-    for (int8_t _x = 0; _x < new_w; _x++) {
+    float pixel_y = 0;
+    bool isOn;
+    int16_t _x, _y;
+
+    int16_t __x, __y;
+    float cos_theta = cos(rotation);
+    float sin_theta = sin(rotation);
+
+    for (_x = 0; _x < new_w; _x++) {
         test_pixel_x = floor(pixel_x);
-        float pixel_y = 0;
-        for (int8_t _y = 0; _y < new_h; _y++) {
-            bool isOn = test_pixel(sprite->asset->data, test_pixel_x, floor(pixel_y), sprite->size.x);
-            int8_t __x = _x + offsetX;
-            int8_t __y = _y + offsetY;
-            if (isOn == is_black && __x >= 0 && __y >= 0 && __y < SCREEN_HEIGHT)
-                set_pixel(canvas->fb.tile_buf_ptr, __x, __y, SCREEN_WIDTH, draw_color);
+        pixel_y = 0;
+        for (_y = 0; _y < new_h; _y++) {
+            // Perform rotation
+            __x = round((_x - new_w / 2.0) * cos_theta - (_y - new_h / 2.0) * sin_theta + new_w / 2.0 + offsetX);
+            __y = round((_x - new_w / 2.0) * sin_theta + (_y - new_h / 2.0) * cos_theta + new_h / 2.0 + offsetY);
+
+            if (__y < SCREEN_HEIGHT && __y >= 0 && __x >= 0 && __x < SCREEN_WIDTH) {
+                isOn = test_pixel(sprite->asset->data, test_pixel_x, floor(pixel_y), sprite->size.x) == is_black;
+                if (isOn)
+                    set_pixel(canvas, __x, __y, SCREEN_WIDTH, draw_color);
+            }
             pixel_y += yInc;
         }
         pixel_x += xInc;
     }
-}
-
-void draw_buffer(Canvas *const canvas, Vector position, const sprite_t *sprite) {
-    draw_buffer_scaled(canvas, position, sprite, (Vector) {1, 1});
 }
 
 void
-draw_buffer_scaled(Canvas *const canvas, Vector position, const sprite_t *sprite, Vector scale) {
-
+draw_buffer_scaled(uint8_t* canvas, Vector *const position, sprite_t *const sprite, Vector *const scale,
+                   float rotation) {
     switch (sprite->draw_mode) {
-        case Default:
-            draw_default_mode(canvas, position, sprite, &scale);
+        default:
+        case BlackOnly:
+            draw_color_as(canvas, position, sprite, true, Black, scale, rotation);
             break;
         case WhiteOnly:
-            draw_color_as(canvas, position, sprite, false, White, &scale);
-            break;
-        case BlackOnly:
-            draw_color_as(canvas, position, sprite, true, Black, &scale);
+            draw_color_as(canvas, position, sprite, false, White, scale, rotation);
             break;
         case WhiteAsBlack:
-            draw_color_as(canvas, position, sprite, false, Black, &scale);
+            draw_color_as(canvas, position, sprite, false, Black, scale, rotation);
             break;
         case BlackAsWhite:
-            draw_color_as(canvas, position, sprite, true, White, &scale);
+            draw_color_as(canvas, position, sprite, true, White, scale, rotation);
             break;
         case WhiteAsInverted:
-            draw_color_as(canvas, position, sprite, false, Flip, &scale);
+            draw_color_as(canvas, position, sprite, false, Flip, scale, rotation);
             break;
         case BlackAsInverted:
-            draw_color_as(canvas, position, sprite, true, Flip, &scale);
+            draw_color_as(canvas, position, sprite, true, Flip, scale, rotation);
             break;
     }
 }
 
 void set_pixel(uint8_t *buffer, int16_t x, int16_t y, uint8_t sw, PixelColor draw_mode) {
-    uint8_t current_bit = (y % 8);
-    uint8_t current_row = ((y - current_bit) / 8);
-    uint32_t i = current_row * sw + x;
-    uint8_t current_value = buffer[i];
+    uint8_t bit = 1 << (y & 7);
+    uint8_t *p = buffer + (y >> 3) * sw + x;
+
     switch (draw_mode) {
         case Black:
-            buffer[i] = current_value | (1 << current_bit);
+            *p |= bit;
             break;
         case White:
-            buffer[i] = current_value & ~(1 << current_bit);
+            *p &= ~bit;
             break;
         case Flip:
-            buffer[i] = current_value ^ (1 << current_bit);
+            *p ^= bit;
             break;
     }
 }
@@ -186,14 +201,13 @@ ImageAsset *new_image_asset(const Icon *icon) {
         while (item) {
             t_ListItem *t = item;
             ImageAsset *d = (ImageAsset *) t->data;
-            FURI_LOG_I("FlipperGameEngine", "Testing %p and %p", d->icon, icon);
 
             if (d->icon == icon)
                 return d;
             item = item->next;
         }
     }
-    FURI_LOG_I("FlipperGameEngine", "new image %p", icon);
+    FURI_LOG_I("FlipperGameEngine", "Image loaded #%p", icon);
 
     ImageAsset *a = allocate(sizeof(ImageAsset));
     a->icon = icon;
@@ -202,20 +216,34 @@ ImageAsset *new_image_asset(const Icon *icon) {
     return a;
 }
 
-void clear_image_assets(){
+void clear_image_assets() {
     if (images == NULL)
         return;
 
     t_ListItem *item = images->start;
     if (item != NULL) {
         while (item) {
+            check_pointer(item);
             t_ListItem *t = item;
+            check_pointer(t);
             ImageAsset *d = (ImageAsset *) t->data;
-            if(d->data)
+            check_pointer(d);
+            check_pointer(d->data);
+            if (d->data)
                 release(d->data);
 
             item = item->next;
         }
     }
     list_clear(images);
+}
+void copy_to_screen_buffer(uint8_t* src, uint8_t* dst){
+    for(int i=0;i<1024;i++){
+        dst[i]=src[i];
+    }
+}
+void clear_buffer(uint8_t* src){
+    for(int i=0;i<1024;i++){
+        src[i]=0;
+    }
 }

@@ -123,6 +123,10 @@ Vector get_matrix_translation(const Matrix *m) {
     return (Vector) {m->data[2], m->data[5]};
 }
 
+float get_matrix_rotation(const Matrix *m){
+    return atan2(m->data[0], m->data[1]);
+}
+
 Vector matrix_mul_vector(const Matrix *a, const Vector *v) {
     float r[3] = {0, 0, 0};
     float vec[3] = {v->x, v->y, 1};

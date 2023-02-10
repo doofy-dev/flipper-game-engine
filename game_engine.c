@@ -3,41 +3,85 @@
 #include "util/util.h"
 
 EngineState *engineState;
-size_t start_heap=0;
+size_t start_heap = 0;
 
 
-void update_tree(List *items, RenderQueue *render_state, Vector s);
+void update_tree(List *items, RenderData *render_state, Vector s);
+bool should_work=true;
 
-static void update(RenderQueue *queue) {
+static int32_t render_thread(void *ctx) {
+    furi_assert(ctx);
+    FURI_LOG_D("FlipperGameEngine", "Thread init");
+    while(should_work) {
+        FURI_LOG_D("FlipperGameEngine", "Thread loop");
+        check_pointer(ctx);
+        const RenderData *worker = acquire_mutex((ValueMutex *) ctx, 20);
+        FURI_LOG_D("FlipperGameEngine", "mutex");
+        if(worker != NULL) {
+            check_pointer(worker->buffer);
+            clear_buffer(worker->buffer);
+            FURI_LOG_D("FlipperGameEngine", "For");
+            for (int i = 0; i < worker->render_count; i++) {
+                RenderInfo s = worker->render_list[i];
+                if (s.image == NULL || s.image->asset == NULL) {
+                    continue;
+                }
+                FURI_LOG_D("FlipperGameEngine", "Render");
+                check_pointer(s.image->asset);
+                if (s.image->asset->loaded)
+                    draw_buffer_scaled(worker->buffer, &(s.position), s.image, &(s.render_scale), s.rotation);
+            }
+            release_mutex((ValueMutex *) ctx, worker);
+        }
+        furi_delay_ms(10);
+    }
+    FURI_LOG_D("FlipperGameEngine", "Exiting Thread");
+    return 0;
+}
+
+void stop_thread() {
+    FURI_LOG_D("FlipperGameEngine", "Stopping render thread");
+    RenderData *data = acquire_mutex((ValueMutex *) &(engineState->render_mutex), FuriWaitForever);
+    should_work = false;
+    release_mutex((ValueMutex *) &(engineState->render_mutex), data);
+    furi_thread_join(engineState->buffer_thread);
+    furi_thread_free(engineState->buffer_thread);
+}
+
+static void update(RenderData *queue) {
+//    uint32_t start=start=furi_get_tick();
+
+    check_pointer(queue);
     queue->render_count = 0;
-    if(engineState->scene)
-        update_tree(engineState->scene->entities, queue, (Vector){1,1});
+    check_pointer(engineState->scene);
+    if (engineState->scene) {
+        check_pointer(engineState->scene->entities);
+        update_tree(engineState->scene->entities, queue, (Vector) {1, 1});
+    }
+//    start=furi_get_tick()-start;
+//    FURI_LOG_D("FlipperGameEngine", "Update: %ld", start);
 }
 
 static void render(Canvas *const canvas, void *ctx) {
-
-    const RenderQueue *queue = acquire_mutex((ValueMutex *) ctx, 25);
+    const RenderData *queue = acquire_mutex((ValueMutex *) ctx, 25);
     if (queue == NULL) {
         return;
     }
+    uint32_t start = furi_get_tick();
     for (int i = 0; i < queue->render_count; i++) {
         RenderInfo s = queue->render_list[i];
-        if (s.image == NULL) {
-            FURI_LOG_E("FlipperGameEngine", "Image render failed because sprite is null (ADDR: %p)", s.image);
+        if (s.image == NULL || s.image->asset == NULL) {
             continue;
         }
-
-        if(s.image->asset->loaded==false)
+        if (s.image->asset->loaded == false)
             render_sprite(canvas, s.image);
-
-//        draw_buffer_scaled(canvas, s.position, s.image, s.render_scale);
-        draw_buffer_scaled(canvas, s.position, s.image, s.render_scale);
-//        canvas_draw_bitmap(canvas, s.position.x+100-s.image->size.x/2, s.position.y-s.image->size.y/2, s.image->size.x, s.image->size.y, s.image->data);
-//        draw_pixels(canvas, s.image->data, s.position.x, s.position.y, s.image->size.x, s.image->size.y, Default);
     }
+    copy_to_screen_buffer(queue->buffer, get_buffer(canvas));
+    char str[80];
+    snprintf(str, sizeof(str), "FrameTime %ld", furi_get_tick() - start);
+    canvas_draw_str_aligned(canvas, 0, 0, AlignLeft, AlignTop, str);
     release_mutex((ValueMutex *) ctx, queue);
 }
-
 
 static void handle_input(InputEvent *input_event, FuriMessageQueue *event_queue) {
     furi_assert(event_queue);
@@ -52,17 +96,20 @@ static void update_timer(FuriMessageQueue *event_queue) {
 }
 
 int32_t setup_engine(SetupState state) {
-    start_heap=memmgr_get_free_heap();
+    start_heap = memmgr_get_free_heap();
     FURI_LOG_I("FlipperGameEngine", "Starting engine");
     engineState = allocate(sizeof(EngineState));
     engineState->app_name = state.app_name;
     engineState->event_queue = furi_message_queue_alloc(8, sizeof(AppEvent));
 
     engineState->game_state = allocate(state.state_size);
-    engineState->render_queue = allocate(sizeof(RenderQueue));
-    engineState->render_queue->render_count = 0;
+    engineState->render_info = allocate(sizeof(RenderData));
     state.init_state(engineState->game_state);
-    if (!init_mutex(&(engineState->render_mutex), engineState->render_queue, sizeof(RenderQueue))) {
+
+    engineState->render_info->buffer= make_buffer(SCREEN_WIDTH, SCREEN_HEIGHT);
+    engineState->render_info->render_count = 0;
+
+    if (!init_mutex(&(engineState->render_mutex), engineState->render_info, sizeof(RenderData))) {
         FURI_LOG_E("FlipperGameEngine", "Cannot create mutex!");
         engineState->loaded = false;
         return 255;
@@ -88,18 +135,24 @@ int32_t setup_engine(SetupState state) {
 
     engineState->loaded = true;
 
+    FURI_LOG_D("FlipperGameEngine", "Starting render thread");
+    engineState->buffer_thread = furi_thread_alloc_ex(
+            "BackBufferThread", 3*1024, render_thread, &(engineState->render_mutex));
+    furi_thread_start(engineState->buffer_thread);
     return 0;
 }
 
 void cleanup() {
     FURI_LOG_I("FlipperGameEngine", "Cleaning up data");
     if (engineState->loaded) {
-        if(engineState->scene)
+        stop_thread();
+        if (engineState->scene)
             clear_scene(engineState->scene);
         notification_message_block(engineState->notification_app, &sequence_display_backlight_enforce_auto);
         furi_timer_free(engineState->timer);
         view_port_enabled_set(engineState->viewport, false);
         gui_remove_view_port(engineState->gui, engineState->viewport);
+
         furi_record_close(RECORD_GUI);
         furi_record_close(RECORD_NOTIFICATION);
         view_port_free(engineState->viewport);
@@ -107,9 +160,10 @@ void cleanup() {
         clear_image_assets();
     }
 
-    if (engineState->prev_frame != NULL)
-        release(engineState->prev_frame);
-    release(engineState->render_queue);
+    if (engineState->render_info->buffer != NULL)
+        release(engineState->render_info->buffer);
+    if (engineState->render_info != NULL)
+        release(engineState->render_info);
     release(engineState->game_state);
     furi_message_queue_free(engineState->event_queue);
     release(engineState);
@@ -121,7 +175,7 @@ void start_loop() {
         FURI_LOG_E("FlipperGameEngine", "Cannot start game, load failed!");
         return;
     }
-    engineState->render_queue->render_count = 0;
+    engineState->render_info->render_count = 0;
 
     AppEvent event;
     engineState->processing = true;
@@ -131,7 +185,7 @@ void start_loop() {
 
         FuriStatus event_status = furi_message_queue_get(engineState->event_queue, &event, 25);
 
-        RenderQueue *render_state = (RenderQueue *) acquire_mutex_block(&(engineState->render_mutex));
+        RenderData *render_state = (RenderData *) acquire_mutex_block(&(engineState->render_mutex));
         unsigned int tick = furi_get_tick();
 
 
@@ -141,6 +195,7 @@ void start_loop() {
             FURI_LOG_E("FlipperGameEngine", "render state mutex failed");
             continue;
         }
+        check_pointer(engineState);
         if (event_status == FuriStatusOk) {
 
             if (event.type == EventInput) {
@@ -164,13 +219,13 @@ void start_loop() {
         }/* else {
             FURI_LOG_D("FlipperGameEngine", "osMessageQueue: event timeout");
         }*/
-        if (engineState->render_queue->render_count > 0)
+        if (engineState->render_info->render_count > 0)
             view_port_update(engineState->viewport);
         release_mutex(&(engineState->render_mutex), render_state);
     }
     FURI_LOG_I("FlipperGameEngine", "Exiting main loop");
     cleanup();
-    if((start_heap-memmgr_get_free_heap()) != 0)
+    if ((start_heap - memmgr_get_free_heap()) != 0)
         FURI_LOG_E("FlipperGameEngine", "Possible memory leak! Diff %zu", start_heap - memmgr_get_free_heap());
 }
 
@@ -203,13 +258,14 @@ void set_scene(Scene *s) {
 
 }
 
-void update_tree(List *items, RenderQueue *render_state, Vector scale) {
+void update_tree(List *items, RenderData *render_state, Vector scale) {
 
     t_ListItem *curr = items->start;
     if (!curr) return;
     while (curr) {
         entity_t *e = (entity_t *) curr->data;
-        Vector new_scale=vector_mul_components(scale, e->transform.scale);
+        check_pointer(e);
+        Vector new_scale = vector_mul_components(scale, e->transform.scale);
         if (e->enabled) {
             t_ListItem *component = e->components->start;
             while (component) {
@@ -220,13 +276,17 @@ void update_tree(List *items, RenderQueue *render_state, Vector scale) {
             if (e->transform.dirty) {
                 update_transform(&(e->transform));
             }
+            check_pointer(e->transform.children);
             update_tree(e->transform.children, render_state, new_scale);
 
             if (e->draw) {
                 if (render_state->render_count < 63) {
                     render_state->render_list[render_state->render_count].image = &(e->sprite);
                     render_state->render_list[render_state->render_count].render_scale = new_scale;
-                    render_state->render_list[render_state->render_count].position = get_matrix_translation(&(e->transform.modelMatrix));
+                    render_state->render_list[render_state->render_count].rotation = get_matrix_rotation(
+                            &(e->transform.modelMatrix));
+                    render_state->render_list[render_state->render_count].position = get_matrix_translation(
+                            &(e->transform.modelMatrix));
                     render_state->render_count++;
                 }
             }

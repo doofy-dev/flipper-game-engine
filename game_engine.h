@@ -32,12 +32,15 @@ typedef struct {
     sprite_t *image;
     Vector render_scale;
     Vector position;
+    float rotation;
 } RenderInfo;
 
 typedef struct {
     RenderInfo render_list[64];
     uint8_t render_count;
-} RenderQueue;
+    uint8_t *buffer;
+} RenderData;
+
 
 typedef struct {
     const char* app_name;
@@ -48,12 +51,15 @@ typedef struct {
     FuriMessageQueue *event_queue;
     void *game_state;
     ValueMutex render_mutex;
-    RenderQueue *render_queue;
+
+    RenderData *render_info;
     NotificationApp *notification_app;
     ViewPort *viewport;
     FuriTimer *timer;
     Gui *gui;
-    uint8_t *prev_frame;
+
+    FuriThread *buffer_thread;
+
     bool loaded;
     Scene *scene;
     bool processing;

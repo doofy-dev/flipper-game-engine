@@ -28,13 +28,15 @@ void list_add(List *list, void *data) {
 void list_remove_item(List *list, void *data) {
     t_ListItem *s = list->start;
     if (s == NULL) return;
-    if (s == data) {
+    if (s->data == data) {
         list->start = s->next;
         list->count--;
     } else {
         while (s != NULL) {
-            if (s->next == data) {
+            if (s->next->data == data) {
                 s->next = s->next->next;
+                free(s->data);
+                free(s);
                 list->count--;
                 return;
             }
@@ -70,7 +72,8 @@ bool list_splice(List *list, uint32_t index, uint32_t count) {
         while (curr_id < (index + count)) {
             t_ListItem *t = e;
             e = e->next;
-            release(t->data);
+            if(t->data)
+                release(t->data);
             release(t);
             curr_id++;
         }
@@ -90,16 +93,16 @@ bool list_splice(List *list, uint32_t index, uint32_t count) {
 
 void list_clear(List *list) {
     t_ListItem *item = list->start;
-    if (item == NULL) return;
-    while (item->next) {
+    while (item) {
         t_ListItem *t = item;
         item = item->next;
+
         if (t->data)
             release(t->data);
         release(t);
     }
-    release(item->data);
-    release(item);
+/*    release(item->data);
+    release(item);*/
     list->count = 0;
 }
 
@@ -110,13 +113,11 @@ void list_free(List *list) {
 
 void *list_find(List *list, void *data) {
     t_ListItem *item = list->start;
-    if (item != NULL) {
-        while (item->next) {
-            t_ListItem *t = item;
-            item = item->next;
-            if (t->data == data)
-                return t;
-        }
+    while (item) {
+        t_ListItem *t = item;
+        item = item->next;
+        if (t->data == data)
+            return t;
     }
     return NULL;
 }

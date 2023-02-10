@@ -9,7 +9,6 @@ typedef struct Sprite sprite_t;
 
 
 typedef enum {
-    Default,
     WhiteOnly,
     BlackOnly,
     WhiteAsBlack,
@@ -19,7 +18,9 @@ typedef enum {
 } DrawMode;
 
 typedef enum {
-    Black, White, Flip
+    Black, //or
+    White, //
+    Flip   //not
 } PixelColor;
 
 typedef struct {
@@ -46,10 +47,11 @@ bool in_screen(int16_t x, int16_t y);
 uint8_t* get_buffer(Canvas *const canvas);
 uint8_t* make_buffer(uint8_t w, uint8_t h);
 void clone_buffer(uint8_t* canvas, uint8_t* data);
-void draw_buffer_scaled(Canvas *const canvas, Vector position, const sprite_t *sprite, Vector scale);
-void draw_buffer(Canvas *const canvas, Vector position, const sprite_t *sprite);
+void draw_buffer_scaled(uint8_t* canvas, Vector *const position, sprite_t *const sprite, Vector *const scale, float rotation);
 void set_pixel(uint8_t* canvas, int16_t x, int16_t y,  uint8_t w, PixelColor draw_mode);
 sprite_t load_sprite(const Icon *icon);
 void render_sprite(Canvas *const canvas,sprite_t *sprite);
 ImageAsset *new_image_asset(const Icon *icon);
 void clear_image_assets();
+void clear_buffer(uint8_t* src);
+void copy_to_screen_buffer(uint8_t* src, uint8_t* dst);

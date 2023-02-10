@@ -14,3 +14,8 @@ void local_free(void *p, const char *file, int line, const char *func) {
         FURI_LOG_W("FlipperGameEngine", "[RELEASE ERROR] %s:%s(), line %i, %p", file, func, line, p);
     }
 }
+
+void check_ptr(void *p, const char *file, int line, const char *func){
+    if(p==NULL)
+        FURI_LOG_W("FlipperGameEngine", "[NULLPTR] %s:%s(), line %i", file, func, line);
+}

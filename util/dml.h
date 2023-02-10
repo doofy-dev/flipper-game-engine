@@ -142,3 +142,5 @@ Matrix matrix_multiply(const Matrix *a, const Matrix *b);
 Vector get_matrix_translation(const Matrix *m);
 
 Vector matrix_mul_vector(const Matrix *a, const Vector *v);
+
+float get_matrix_rotation(const Matrix *m);

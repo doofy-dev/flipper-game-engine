@@ -23,7 +23,7 @@ entity_t *new_entity(const char *name) {
     e->sprite.anchor = (Vector) {0, 0};
     e->transform.children = make_list(sizeof(transform_t));
     e->transform.entity = e;
-    e->sprite.draw_mode = Default;
+    e->sprite.draw_mode = BlackOnly;
     return e;
 }
 
@@ -37,10 +37,13 @@ void clear_component_data(List *l) {
     if (li != NULL) {
         while (li) {
             component_t *t = (component_t *) li->data;
+            check_pointer(t);
+            check_pointer(t->componentInfo.data);
             release(t->componentInfo.data);
             li = li->next;
         }
     }
+    check_pointer(l);
     list_free(l);
 }
 
@@ -48,6 +51,7 @@ void clear_branch(List *l) {
 
     if (l == NULL) return;
     t_ListItem *li = l->start;
+    check_pointer(li);
 
     if (li != NULL) {
         while (li) {
@@ -55,6 +59,7 @@ void clear_branch(List *l) {
             FURI_LOG_I("FlipperGameEngine", "Clearing entity: %s", t->name);
             clear_branch(t->transform.children);
             FURI_LOG_I("FlipperGameEngine", "Freeing components");
+            check_pointer(t->components);
             clear_component_data(t->components);
             li = li->next;
         }
