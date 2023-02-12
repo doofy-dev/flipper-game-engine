@@ -5,6 +5,7 @@
 #include "util/graphics.h"
 
 typedef struct Entity entity_t;
+typedef struct PhysicsBody physics_body_t;
 typedef struct Transform transform_t;
 typedef struct Component component_t;
 
@@ -36,7 +37,7 @@ struct Entity {
     transform_t transform;
     List *components;
     sprite_t sprite;
-
+    physics_body_t *physicsBody;
     bool enabled;
     bool draw;
     const char* name;

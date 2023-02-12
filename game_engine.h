@@ -30,13 +30,11 @@ typedef struct {
 
 typedef struct {
     sprite_t *image;
-    Vector render_scale;
-    Vector position;
-    float rotation;
+    Matrix matrix;
 } RenderInfo;
 
 typedef struct {
-    RenderInfo render_list[64];
+    RenderInfo render_list[32];
     uint8_t render_count;
     uint8_t *buffer;
 } RenderData;

@@ -112,17 +112,21 @@ void add_to_entity(entity_t *parent, entity_t *child) {
     child->transform.parent = parent;
 }
 
+Matrix m_translate, m_rotate, m_scale, m_transform;
+
 void update_transform(transform_t *t) {
     t_ListItem *e = t->children->start;
     t->dirty = false;
-    Matrix translate = translation_matrix(&(t->position));
-    Matrix rotate = rotation_matrix(t->rotation);
-    Matrix scale = scale_matrix(&(t->scale));
-    Matrix tr = matrix_multiply(&translate, &rotate);
-    t->modelMatrix = matrix_multiply(&tr, &scale);
+    translation_matrix(&(t->position), &m_translate);
+    rotation_matrix(t->rotation, &m_rotate);
+    scale_matrix(&(t->scale), &m_scale);
+    matrix_multiply(&m_translate, &m_rotate, &m_transform);
+    matrix_multiply(&m_transform, &m_scale, &(t->modelMatrix));
 
     if (t->parent) {
-        t->modelMatrix = matrix_multiply(&(t->parent->transform.modelMatrix), &(t->modelMatrix));
+        Matrix res;
+        matrix_multiply(&(t->parent->transform.modelMatrix), &(t->modelMatrix), &(res));
+        t->modelMatrix = res;
     }
 
     while (e) {
@@ -132,7 +136,8 @@ void update_transform(transform_t *t) {
 }
 
 void add_position(transform_t *t, Vector amount) {
-    set_position(t, vector_add(t->position, amount));
+    vector_add(&(t->position), &amount, &(t->position));
+    t->dirty = true;
 }
 
 void set_position(transform_t *t, Vector position) {
@@ -150,7 +155,8 @@ void set_rotation(transform_t *t, float degree) {
 }
 
 void add_scale(transform_t *t, Vector amount) {
-    set_scale(t, vector_add(t->scale, amount));
+    vector_add(&(t->scale), &amount, &(t->scale));
+    t->dirty = true;
 }
 
 void set_scale(transform_t *t, Vector scale) {

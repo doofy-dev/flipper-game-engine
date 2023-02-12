@@ -7,135 +7,153 @@ float lerp(float v0, float v1, float t) {
     return (1 - t) * v0 + t * v1;
 }
 
-Vector lerp_2d(Vector start, Vector end, float t) {
-    return (Vector) {
-            lerp(start.x, end.x, t),
-            lerp(start.y, end.y, t),
-    };
+void lerp_2d(const Vector *const start, const Vector *const end, float t, Vector *dst) {
+    dst->x = lerp(start->x, end->x, t);
+    dst->y = lerp(start->x, end->y, t);
 }
 
-Vector quadratic_2d(Vector start, Vector control, Vector end, float t) {
-    return lerp_2d(
-            lerp_2d(start, control, t),
-            lerp_2d(control, end, t),
-            t
-    );
+void
+quadratic_2d(const Vector *const start, const Vector *const control, const Vector *const end, float t, Vector *dst) {
+    Vector a, b;
+    lerp_2d(start, control, t, &a);
+    lerp_2d(control, end, t, &b);
+    lerp_2d(&a, &b, t, dst);
 }
 
-Vector vector_add(Vector a, Vector b) {
-    return (Vector) {a.x + b.x, a.y + b.y};
+void vector_add(const Vector *const a, const Vector *const b, Vector *dst) {
+    dst->x = a->x + b->x;
+    dst->y = a->y + b->y;
 }
 
-Vector vector_sub(Vector a, Vector b) {
-    return (Vector) {a.x - b.x, a.y - b.y};
+void vector_sub(const Vector *const a, const Vector *const b, Vector *dst) {
+    dst->x = a->x - b->x;
+    dst->y = a->y - b->y;
 }
 
-Vector vector_mul_components(Vector a, Vector b) {
-    return (Vector) {a.x * b.x, a.y * b.y};
+void vector_mul_components(const Vector *const a, const Vector *const b, Vector *dst) {
+    dst->x = a->x * b->x;
+    dst->y = a->y * b->y;
 }
 
-Vector vector_div_components(Vector a, Vector b) {
-    return (Vector) {a.x / b.x, a.y / b.y};
+void vector_div_components(const Vector *const a, const Vector *const b, Vector *dst) {
+    dst->x = a->x / b->x;
+    dst->y = a->y / b->y;
 }
 
-Vector vector_normalized(Vector a) {
+void vector_normalized(const Vector *const a, Vector *dst) {
     float length = vector_magnitude(a);
-    return (Vector) {
-            a.x / length,
-            a.y / length
-    };
+    dst->x = a->x / length;
+    dst->y = a->y / length;
 }
 
-float vector_magnitude(Vector a) {
-    return sqrt(a.x * a.x + a.y * a.y);
+float vector_magnitude(const Vector *const a) {
+    return sqrt(a->x * a->x + a->y * a->y);
 }
 
-float vector_distance(Vector a, Vector b) {
-    return vector_magnitude(vector_sub(a, b));
+float vector_distance(const Vector *const a, const Vector *b) {
+    Vector c;
+    vector_sub(a, b, &c);
+    return vector_magnitude(&c);
 }
 
-float vector_dot(Vector a, Vector b) {
-    Vector _a = vector_normalized(a);
-    Vector _b = vector_normalized(b);
+float vector_dot(const Vector *const a, const Vector *b) {
+    Vector _a, _b;
+    vector_normalized(a, &_a);
+    vector_normalized(b, &_b);
     return _a.x * _b.x + _a.y * _b.y;
 }
 
-Vector vector_rotate(Vector a, float degrees) {
-    return (Vector) {
-            (float) cos(degrees) * a.x - (float) sin(degrees) * a.y,
-            (float) sin(degrees) * a.x + (float) cos(degrees) * a.y,
-    };
+void vector_rotate(const Vector *const a, float degrees, Vector *dst) {
+    dst->x = (float) cos(degrees) * a->x - (float) sin(degrees) * a->y;
+    dst->y = (float) sin(degrees) * a->x + (float) cos(degrees) * a->y;
 }
 
-Matrix identity_matrix() {
-    return (Matrix) {
-            .data={
-                    1, 0, 0,
-                    0, 1, 0,
-                    0, 0, 1,
-            }
-    };
+void identity_matrix(Matrix *m) {
+    m->data[0] = 1;
+    m->data[1] = 0;
+    m->data[2] = 0;
+    m->data[3] = 0;
+    m->data[4] = 1;
+    m->data[5] = 0;
+    m->data[6] = 0;
+    m->data[7] = 0;
+    m->data[8] = 1;
 }
 
-Matrix translation_matrix(const Vector *pos) {
-    return (Matrix) {
-            .data={
-                    1, 0, pos->x,
-                    0, 1, pos->y,
-                    0, 0, 1
-            }
-    };
+void translation_matrix(const Vector *const pos, Matrix *m) {
+    m->data[0] = 1;
+    m->data[1] = 0;
+    m->data[2] = pos->x;
+
+    m->data[3] = 0;
+    m->data[4] = 1;
+    m->data[5] = pos->y;
+
+    m->data[6] = 0;
+    m->data[7] = 0;
+    m->data[8] = 1;
 }
 
-Matrix scale_matrix(const Vector *scale) {
-    return (Matrix) {
-            .data={
-                    scale->x, 0, 0,
-                    0, scale->y, 0,
-                    0, 0, 1
-            }
-    };
+void scale_matrix(const Vector *const scale, Matrix *m) {
+    m->data[0] = scale->x;
+    m->data[1] = 0;
+    m->data[2] = 0;
+
+    m->data[3] = 0;
+    m->data[4] = scale->y;
+    m->data[5] = 0;
+
+    m->data[6] = 0;
+    m->data[7] = 0;
+    m->data[8] = 1;
 }
 
-Matrix rotation_matrix(float angle) {
-    return (Matrix) {
-            .data={
-                    (float) cos(angle), -(float) sin(angle), 0,
-                    (float) sin(angle), (float) cos(angle), 0,
-                    0, 0, 1,
-            }
-    };
+void rotation_matrix(float angle, Matrix *m) {
+    m->data[0] = (float) cos(angle);
+    m->data[1] = -(float) sin(angle);
+    m->data[2] = 0;
+
+    m->data[3] = (float) sin(angle);
+    m->data[4] = (float) cos(angle);
+    m->data[5] = 0;
+
+    m->data[6] = 0;
+    m->data[7] = 0;
+    m->data[8] = 1;
 }
 
-Matrix matrix_multiply(const Matrix *a, const Matrix *b) {
-    Matrix m = (Matrix) {.data={0, 0, 0, 0, 0, 0, 0, 0, 0}};
-    for (uint8_t row = 0; row < 3; row++) {
-        for (uint8_t col = 0; col < 3; col++) {
-            for (uint8_t i = 0; i < 3; i++) {
-                m.data[row * 3 + col] += a->data[row * 3 + i] * b->data[i * 3 + col];
+void matrix_multiply(const Matrix *const a, const Matrix *const b, Matrix *dst) {
+    uint8_t i,j,k;
+
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 3; j++) {
+            uint8_t resultID = i*3+j;
+            dst->data[resultID]=0;
+            for (k = 0; k < 3; k++) {
+                dst->data[resultID]+=a->data[i*3+k]*b->data[k*3+j];
             }
         }
     }
-    return m;
 }
 
-Vector get_matrix_translation(const Matrix *m) {
-    return (Vector) {m->data[2], m->data[5]};
+void get_matrix_translation(const Matrix *const m, Vector *dst) {
+    dst->x = m->data[2];
+    dst->y = m->data[5];
 }
 
-float get_matrix_rotation(const Matrix *m){
+float get_matrix_rotation(const Matrix *const m) {
     return atan2(m->data[0], m->data[1]);
 }
 
-Vector matrix_mul_vector(const Matrix *a, const Vector *v) {
-    float r[3] = {0, 0, 0};
-    float vec[3] = {v->x, v->y, 1};
-    for (uint8_t row = 0; row < 3; row++) {
-        for (uint8_t col = 0; col < 3; col++) {
-            for (uint8_t i = 0; i < 3; i++) {
-                r[row] += a->data[row * 3 + i] * vec[i];
-            }
-        }
-    }
-    return (Vector) {vec[0], vec[1]};
+void get_matrix_scale(const Matrix *const a, Vector *dst){
+    const float *M = a->data;
+    dst->x = sqrt(M[0]*M[0] + M[1]*M[1]);
+    dst->y = sqrt(M[3]*M[3] + M[4]*M[4]);
+}
+
+void matrix_mul_vector(const Matrix *const a, const Vector *const v, Vector *dst) {
+    const float *M = a->data;
+
+    dst->x=M[0]*v->x + M[1]*v->y + M[2];
+    dst->y=M[3]*v->x + M[4]*v->y + M[5];
 }

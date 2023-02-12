@@ -4,9 +4,9 @@
 
 #pragma once
 
-#define min(a,b) ((a)<(b)?(a):(b))
-#define max(a,b) ((a)>(b)?(a):(b))
-//#define abs(x) ((x)>0?(x):-(x))
+#define min(a, b) ((a)<(b)?(a):(b))
+#define max(a, b) ((a)>(b)?(a):(b))
+#define l_abs(x) ((x)>=0?(x):-(x))
 
 typedef struct {
     float x;
@@ -30,84 +30,87 @@ float lerp(float v0, float v1, float t);
 /**
  * 2D lerp function
  *
+ * @param dst   Where to store, 2d Vector between start and end at time
  * @param start Start vector
  * @param end   End vector
  * @param t     Time (0-1 range)
- * @return      2d Vector between start and end at time
  */
-Vector lerp_2d(Vector start, Vector end, float t);
+void lerp_2d(const Vector *const start, const Vector *const end, float t, Vector *dst);
 
 /**
  * Quadratic lerp function
  *
+ * @param dst   Where to store, 2d Vector at time
  * @param start     Start vector
  * @param control   Control point
  * @param end       End vector
  * @param t         Time (0-1 range)
- * @return          2d Vector at time
  */
-Vector quadratic_2d(Vector start, Vector control, Vector end, float t);
+void
+quadratic_2d(const Vector *const start, const Vector *const control, const Vector *const end, float t, Vector *dst);
 
 /**
  * Add vector components together
  *
+ * @param dst   Where to store, Resulting vector
  * @param a     First vector
  * @param b     Second vector
- * @return      Resulting vector
  */
-Vector vector_add(Vector a, Vector b);
+void vector_add(const Vector *const a, const Vector *const b, Vector *dst);
 
 /**
  * Subtract vector components together
  *
+ * @param dst   Where to store, Resulting vector
  * @param a First vector
  * @param b Second vector
- * @return  Resulting vector
  */
-Vector vector_sub(Vector a, Vector b);
+void vector_sub(const Vector *const a, const Vector *const b, Vector *dst);
 
 /**
  * Multiplying vector components together
  *
+ * @param dst   Where to store, Resulting vector
  * @param a First vector
  * @param b Second vector
- * @return  Resulting vector
  */
-Vector vector_mul_components(Vector a, Vector b);
+void vector_mul_components(const Vector *const a, const Vector *const b, Vector *dst);
+
+void vector_mul(const Vector *const a, float amount, Vector *dst);
 
 /**
  * Dividing vector components
  *
+ * @param dst   Where to store, Resulting vector
  * @param a First vector
  * @param b Second vector
- * @return  Resulting vector
  */
-Vector vector_div_components(Vector a, Vector b);
+void vector_div_components(const Vector *const a, const Vector *const b, Vector *dst);
 
 /**
  * Rotate vector
  *
+ * @param dst   Where to store, Resulting vector
  * @param a Vector
  * @param degrees Degrees
- * @return  Resulting vector
  */
-Vector vector_rotate(Vector a, float degrees);
+void vector_rotate(const Vector *const a, float degrees, Vector *dst);
 
 /**
  * Calculating Vector length
  *
  * @param a Direction vector
- * @return  Length of the vector
- */
-float vector_magnitude(Vector a);
+ * @param dst   Where to store, Resulting vector
+*/
+float vector_magnitude(const Vector *const a);
 
 /**
  * Get a normalized vector (length of 1)
  *
  * @param a Direction vector
- * @return  Normalized vector
- */
-Vector vector_normalized(Vector a);
+ * @param dst   Where to store, Resulting vector
+*/
+void vector_normalized(const Vector *const a, Vector *dst);
 
 /**
  * Calculate two vector's distance
@@ -116,7 +119,7 @@ Vector vector_normalized(Vector a);
  * @param b Second vector
  * @return  Distance between vectors
  */
-float vector_distance(Vector a, Vector b);
+float vector_distance(const Vector *const a, const Vector * b);
 
 /**
  * Calculate the dot product of the vectors.
@@ -126,21 +129,22 @@ float vector_distance(Vector a, Vector b);
  * @param b Second vector
  * @return  value from -1 to 1
  */
-float vector_dot(Vector a, Vector b);
+float vector_dot(const Vector *const a, const Vector * b);
 
 
-Matrix identity_matrix();
+void identity_matrix(Matrix *m);
 
-Matrix scale_matrix(const Vector *scale);
+void scale_matrix(const Vector *const scale, Matrix *m);
 
-Matrix translation_matrix(const Vector *pos);
+void translation_matrix(const Vector *const pos, Matrix *m);
 
-Matrix rotation_matrix(float angle);
+void rotation_matrix(float angle, Matrix *m);
 
-Matrix matrix_multiply(const Matrix *a, const Matrix *b);
+void matrix_multiply(const Matrix *const a, const Matrix *const b, Matrix *dst);
+void matrix_mul_vector(const Matrix *const a, const Vector *const v, Vector *dst);
 
-Vector get_matrix_translation(const Matrix *m);
+void get_matrix_translation(const Matrix *const m, Vector *dst);
+void get_matrix_scale(const Matrix *const m, Vector *dst);
+float get_matrix_rotation(const Matrix *const m);
 
-Vector matrix_mul_vector(const Matrix *a, const Vector *v);
 
-float get_matrix_rotation(const Matrix *m);

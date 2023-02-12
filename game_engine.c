@@ -4,38 +4,35 @@
 
 EngineState *engineState;
 size_t start_heap = 0;
+uint32_t frame_time=0;
 
-
-void update_tree(List *items, RenderData *render_state, Vector s);
+void update_tree(List *items, RenderData *render_state);
 bool should_work=true;
 
 static int32_t render_thread(void *ctx) {
     furi_assert(ctx);
-    FURI_LOG_D("FlipperGameEngine", "Thread init");
     while(should_work) {
-        FURI_LOG_D("FlipperGameEngine", "Thread loop");
         check_pointer(ctx);
         const RenderData *worker = acquire_mutex((ValueMutex *) ctx, 20);
-        FURI_LOG_D("FlipperGameEngine", "mutex");
         if(worker != NULL) {
+            uint32_t start = furi_get_tick();
             check_pointer(worker->buffer);
             clear_buffer(worker->buffer);
-            FURI_LOG_D("FlipperGameEngine", "For");
             for (int i = 0; i < worker->render_count; i++) {
                 RenderInfo s = worker->render_list[i];
                 if (s.image == NULL || s.image->asset == NULL) {
                     continue;
                 }
-                FURI_LOG_D("FlipperGameEngine", "Render");
                 check_pointer(s.image->asset);
                 if (s.image->asset->loaded)
-                    draw_buffer_scaled(worker->buffer, &(s.position), s.image, &(s.render_scale), s.rotation);
+                    draw_buffer_scaled(worker->buffer, s.image, &(s.matrix));
             }
+            frame_time=furi_get_tick() - start;
             release_mutex((ValueMutex *) ctx, worker);
         }
         furi_delay_ms(10);
     }
-    FURI_LOG_D("FlipperGameEngine", "Exiting Thread");
+    FURI_LOG_D("FlipperGameEngine", "Stopping render thread");
     return 0;
 }
 
@@ -50,13 +47,12 @@ void stop_thread() {
 
 static void update(RenderData *queue) {
 //    uint32_t start=start=furi_get_tick();
-
     check_pointer(queue);
     queue->render_count = 0;
     check_pointer(engineState->scene);
     if (engineState->scene) {
         check_pointer(engineState->scene->entities);
-        update_tree(engineState->scene->entities, queue, (Vector) {1, 1});
+        update_tree(engineState->scene->entities, queue);
     }
 //    start=furi_get_tick()-start;
 //    FURI_LOG_D("FlipperGameEngine", "Update: %ld", start);
@@ -67,7 +63,7 @@ static void render(Canvas *const canvas, void *ctx) {
     if (queue == NULL) {
         return;
     }
-    uint32_t start = furi_get_tick();
+//    uint32_t start = furi_get_tick();
     for (int i = 0; i < queue->render_count; i++) {
         RenderInfo s = queue->render_list[i];
         if (s.image == NULL || s.image->asset == NULL) {
@@ -78,7 +74,7 @@ static void render(Canvas *const canvas, void *ctx) {
     }
     copy_to_screen_buffer(queue->buffer, get_buffer(canvas));
     char str[80];
-    snprintf(str, sizeof(str), "FrameTime %ld", furi_get_tick() - start);
+    snprintf(str, sizeof(str), "FrameTime %ld", frame_time);
     canvas_draw_str_aligned(canvas, 0, 0, AlignLeft, AlignTop, str);
     release_mutex((ValueMutex *) ctx, queue);
 }
@@ -258,14 +254,13 @@ void set_scene(Scene *s) {
 
 }
 
-void update_tree(List *items, RenderData *render_state, Vector scale) {
+void update_tree(List *items, RenderData *render_state) {
 
     t_ListItem *curr = items->start;
     if (!curr) return;
     while (curr) {
         entity_t *e = (entity_t *) curr->data;
         check_pointer(e);
-        Vector new_scale = vector_mul_components(scale, e->transform.scale);
         if (e->enabled) {
             t_ListItem *component = e->components->start;
             while (component) {
@@ -277,16 +272,12 @@ void update_tree(List *items, RenderData *render_state, Vector scale) {
                 update_transform(&(e->transform));
             }
             check_pointer(e->transform.children);
-            update_tree(e->transform.children, render_state, new_scale);
+            update_tree(e->transform.children, render_state);
 
             if (e->draw) {
-                if (render_state->render_count < 63) {
+                if (render_state->render_count < 32) {
                     render_state->render_list[render_state->render_count].image = &(e->sprite);
-                    render_state->render_list[render_state->render_count].render_scale = new_scale;
-                    render_state->render_list[render_state->render_count].rotation = get_matrix_rotation(
-                            &(e->transform.modelMatrix));
-                    render_state->render_list[render_state->render_count].position = get_matrix_translation(
-                            &(e->transform.modelMatrix));
+                    render_state->render_list[render_state->render_count].matrix = (e->transform.modelMatrix);
                     render_state->render_count++;
                 }
             }

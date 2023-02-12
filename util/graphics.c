@@ -39,59 +39,33 @@ bool read_pixel(Canvas *const canvas, int16_t x, int16_t y) {
     return false;
 }
 
-void draw_color_as_orig(Canvas *const canvas, Vector *const position, sprite_t *const sprite, bool is_black,
-                   PixelColor draw_color, const Vector *scale, float rotation) {
-    UNUSED(rotation);
-    int16_t new_w = round(sprite->size.x * scale->x);
-    int16_t new_h = round(sprite->size.y * scale->y);
+uint8_t pixels[1024];
 
-    int16_t offsetX = round(position->x - (sprite->anchor.x * (new_w / 2.0)));
-    int16_t offsetY = round(position->y - (sprite->anchor.y * (new_h / 2.0)));
-
-    float xInc = sprite->size.x / (float) new_w;
-    float yInc = sprite->size.y / (float) new_h;
-
-    new_w = min(new_w, SCREEN_WIDTH);
-    new_h = min(new_h, SCREEN_HEIGHT);
-    uint16_t test_pixel_x;
-    float pixel_x = 0;
-    float pixel_y = 0;
-    bool isOn;
-    int16_t _x, _y;
-
-    int16_t __x;
-    int8_t __y;
-    for (_x = 0; _x < new_w; _x++) {
-        test_pixel_x = floor(pixel_x);
-        pixel_y = 0;
-        for (_y = 0; _y < new_h; _y++) {
-            __x = _x + offsetX;
-            __y = _y + offsetY;
-
-            if (__y < SCREEN_HEIGHT && __y >= 0 && __x >= 0 && __x < SCREEN_WIDTH) {
-                isOn = test_pixel(sprite->asset->data, test_pixel_x, floor(pixel_y), sprite->size.x) == is_black;
-                if (isOn)
-                    set_pixel(canvas->fb.tile_buf_ptr, __x, __y, SCREEN_WIDTH, draw_color);
-            }
-            pixel_y += yInc;
-        }
-        pixel_x += xInc;
+void draw_color_as(uint8_t *canvas, sprite_t *const sprite, bool is_black,
+                   PixelColor draw_color, const Matrix *const m) {
+    uint8_t *column = pixels;
+    for (uint16_t i = 0; i < 1024; i++) {
+        (*column) = 0;
+        column++;
     }
-}
 
-void draw_color_as(uint8_t* canvas, Vector *const position, sprite_t *const sprite, bool is_black,
-                   PixelColor draw_color, const Vector *scale, float rotation) {
-    int16_t new_w = round(sprite->size.x * scale->x);
-    int16_t new_h = round(sprite->size.y * scale->y);
+    Vector scale;
+    Vector position;
+    float rotation = get_matrix_rotation(m);
+    get_matrix_scale(m, &scale);
+    get_matrix_translation(m, &position);
 
-    int16_t offsetX = round(position->x - (sprite->anchor.x * (new_w / 2.0)));
-    int16_t offsetY = round(position->y - (sprite->anchor.y * (new_h / 2.0)));
+    int16_t new_w = round(sprite->size.x * scale.x);
+    int16_t new_h = round(sprite->size.y * scale.y);
+
+    int16_t offsetX = round(position.x - (sprite->anchor.x * (new_w / 2.0)));
+    int16_t offsetY = round(position.y - (sprite->anchor.y * (new_h / 2.0)));
 
     float xInc = sprite->size.x / (float) new_w;
     float yInc = sprite->size.y / (float) new_h;
 
-    new_w = min(new_w, SCREEN_WIDTH);
-    new_h = min(new_h, SCREEN_HEIGHT);
+/*    new_w = min(new_w, SCREEN_WIDTH);
+    new_h = min(new_h, SCREEN_HEIGHT);*/
     uint16_t test_pixel_x;
     float pixel_x = 0;
     float pixel_y = 0;
@@ -101,17 +75,17 @@ void draw_color_as(uint8_t* canvas, Vector *const position, sprite_t *const spri
     int16_t __x, __y;
     float cos_theta = cos(rotation);
     float sin_theta = sin(rotation);
-
     for (_x = 0; _x < new_w; _x++) {
-        test_pixel_x = floor(pixel_x);
+        test_pixel_x = (int16_t) round(pixel_x);
         pixel_y = 0;
         for (_y = 0; _y < new_h; _y++) {
             // Perform rotation
-            __x = round((_x - new_w / 2.0) * cos_theta - (_y - new_h / 2.0) * sin_theta + new_w / 2.0 + offsetX);
-            __y = round((_x - new_w / 2.0) * sin_theta + (_y - new_h / 2.0) * cos_theta + new_h / 2.0 + offsetY);
+            __x = (int16_t) round((_x - new_w / 2.0) * cos_theta - (_y - new_h / 2.0) * sin_theta + new_w / 2.0 + offsetX);
+            __y = (int16_t) round((_x - new_w / 2.0) * sin_theta + (_y - new_h / 2.0) * cos_theta + new_h / 2.0 + offsetY);
 
             if (__y < SCREEN_HEIGHT && __y >= 0 && __x >= 0 && __x < SCREEN_WIDTH) {
-                isOn = test_pixel(sprite->asset->data, test_pixel_x, floor(pixel_y), sprite->size.x) == is_black;
+                isOn = test_pixel(sprite->asset->data, test_pixel_x, (int16_t) round(pixel_y), sprite->size.x) == is_black;
+                set_pixel(pixels, __x, __y, SCREEN_WIDTH, draw_color);
                 if (isOn)
                     set_pixel(canvas, __x, __y, SCREEN_WIDTH, draw_color);
             }
@@ -121,28 +95,80 @@ void draw_color_as(uint8_t* canvas, Vector *const position, sprite_t *const spri
     }
 }
 
+/*
+
+
+void almost_3d_draw(uint8_t *canvas, sprite_t *const sprite, bool is_black,
+                          PixelColor draw_color, const Matrix *const m) {
+    Vector scale;
+    get_matrix_scale(m, &scale);
+
+    int16_t new_w = round(sprite->size.x * scale.x);
+    int16_t new_h = round(sprite->size.y * scale.y);
+
+    int16_t offsetX = round(m->data[2] - (sprite->anchor.x * (new_w / 2.0)));
+    int16_t offsetY = round(m->data[5] - (sprite->anchor.y * (new_h / 2.0)));
+
+    float xInc = sprite->size.x / (float) new_w;
+    float yInc = sprite->size.y / (float) new_h;
+
+    new_w = min(new_w, SCREEN_WIDTH);
+    new_h = min(new_h, SCREEN_HEIGHT);
+    uint16_t test_pixel_x;
+    float pixel_x = 0;
+    float pixel_y = 0;
+    bool isOn;
+    int16_t _x, _y;
+
+    int16_t transformed_x, transformed_y;
+    Vector transformedPixel, original;
+
+    for (_x = offsetX; _x < new_w; _x++) {
+        test_pixel_x = floor(pixel_x);
+        pixel_y = 0;
+        for (_y = offsetY; _y < new_h; _y++) {
+            original.x = _x;
+            original.y = _y;
+
+            matrix_mul_vector(m, &original, &transformedPixel);
+            // Perform rotation
+            transformed_x = round(transformedPixel.x);
+            transformed_y = round(transformedPixel.y);
+
+            if (transformed_y < SCREEN_HEIGHT && transformed_y >= 0 && transformed_x >= 0 &&
+                transformed_x < SCREEN_WIDTH) {
+                isOn = test_pixel(sprite->asset->data, test_pixel_x, floor(pixel_y), sprite->size.x) == is_black;
+                if (isOn)
+                    set_pixel(canvas, transformed_x, transformed_y, SCREEN_WIDTH, draw_color);
+            }
+            pixel_y += yInc;
+        }
+        pixel_x += xInc;
+    }
+}
+*/
+
 void
-draw_buffer_scaled(uint8_t* canvas, Vector *const position, sprite_t *const sprite, Vector *const scale,
-                   float rotation) {
+draw_buffer_scaled(uint8_t *canvas, sprite_t *const sprite, const Matrix *const m) {
     switch (sprite->draw_mode) {
         default:
         case BlackOnly:
-            draw_color_as(canvas, position, sprite, true, Black, scale, rotation);
+            draw_color_as(canvas, sprite, true, Black, m);
             break;
         case WhiteOnly:
-            draw_color_as(canvas, position, sprite, false, White, scale, rotation);
+            draw_color_as(canvas, sprite, false, White, m);
             break;
         case WhiteAsBlack:
-            draw_color_as(canvas, position, sprite, false, Black, scale, rotation);
+            draw_color_as(canvas, sprite, false, Black, m);
             break;
         case BlackAsWhite:
-            draw_color_as(canvas, position, sprite, true, White, scale, rotation);
+            draw_color_as(canvas, sprite, true, White, m);
             break;
         case WhiteAsInverted:
-            draw_color_as(canvas, position, sprite, false, Flip, scale, rotation);
+            draw_color_as(canvas, sprite, false, Flip, m);
             break;
         case BlackAsInverted:
-            draw_color_as(canvas, position, sprite, true, Flip, scale, rotation);
+            draw_color_as(canvas, sprite, true, Flip, m);
             break;
     }
 }
@@ -237,13 +263,15 @@ void clear_image_assets() {
     }
     list_clear(images);
 }
-void copy_to_screen_buffer(uint8_t* src, uint8_t* dst){
-    for(int i=0;i<1024;i++){
-        dst[i]=src[i];
+
+void copy_to_screen_buffer(uint8_t *src, uint8_t *dst) {
+    for (int i = 0; i < 1024; i++) {
+        dst[i] = src[i];
     }
 }
-void clear_buffer(uint8_t* src){
-    for(int i=0;i<1024;i++){
-        src[i]=0;
+
+void clear_buffer(uint8_t *src) {
+    for (int i = 0; i < 1024; i++) {
+        src[i] = 0;
     }
 }
