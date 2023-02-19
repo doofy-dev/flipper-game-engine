@@ -27,7 +27,7 @@ static int32_t render_thread(void *ctx) {
                 if (s.image->asset->loaded)
                     draw_buffer_scaled(worker->buffer, s.image, &(s.matrix));
             }
-            frame_time=furi_get_tick() - start;
+            frame_time=(int32_t)1000/(furi_get_tick() - start);
             release_mutex((ValueMutex *) ctx, worker);
         }
         furi_delay_ms(10);
@@ -74,7 +74,7 @@ static void render(Canvas *const canvas, void *ctx) {
     }
     copy_to_screen_buffer(queue->buffer, get_buffer(canvas));
     char str[80];
-    snprintf(str, sizeof(str), "FrameTime %ld", frame_time);
+    snprintf(str, sizeof(str), "%ld", frame_time);
     canvas_draw_str_aligned(canvas, 0, 0, AlignLeft, AlignTop, str);
     release_mutex((ValueMutex *) ctx, queue);
 }
