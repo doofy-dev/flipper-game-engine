@@ -13,6 +13,8 @@ typedef struct {
     float y;
 } Vector;
 
+#define VECTOR_ZERO (Vector){0,0}
+
 typedef struct {
     float data[9];
 } Matrix;
@@ -86,6 +88,7 @@ void vector_mul(const Vector *const a, float amount, Vector *dst);
  * @param b Second vector
  */
 void vector_div_components(const Vector *const a, const Vector *const b, Vector *dst);
+void vector_div(const Vector *const a, float b, Vector *dst);
 
 /**
  * Rotate vector
@@ -95,6 +98,11 @@ void vector_div_components(const Vector *const a, const Vector *const b, Vector 
  * @param degrees Degrees
  */
 void vector_rotate(const Vector *const a, float degrees, Vector *dst);
+
+
+void vector_perpendicular(const Vector *const a, Vector *dst);
+
+float vector_cross(const Vector *const a, const Vector * b);
 
 /**
  * Calculating Vector length
@@ -122,15 +130,20 @@ void vector_normalized(const Vector *const a, Vector *dst);
 float vector_distance(const Vector *const a, const Vector * b);
 
 /**
- * Calculate the dot product of the vectors.
+ * Calculate the normalized dot product of the vectors.
  * No need to normalize, it will do it
  *
  * @param a First vector
  * @param b Second vector
  * @return  value from -1 to 1
  */
+float vector_dot_normalized(const Vector *const a, const Vector * b);
+
 float vector_dot(const Vector *const a, const Vector * b);
 
+float vector_distance(const Vector *const a, const Vector * b);
+
+bool vector_project(const Vector *const lineA, const Vector *const lineB, const Vector *const point, Vector *dst);
 
 void identity_matrix(Matrix *m);
 
@@ -146,5 +159,3 @@ void matrix_mul_vector(const Matrix *const a, const Vector *const v, Vector *dst
 void get_matrix_translation(const Matrix *const m, Vector *dst);
 void get_matrix_scale(const Matrix *const m, Vector *dst);
 float get_matrix_rotation(const Matrix *const m);
-
-

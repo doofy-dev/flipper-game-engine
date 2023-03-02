@@ -1,250 +1,153 @@
-/*
+#include "physics.h"
+#include "collision.h"
+#include "physics.h"
+#include <furi.h>
 
-  This file is a part of the Nova Physics Engine
-  project and distributed under the MIT license.
+void circle_poly_collision(PhysicsBody *c, PhysicsBody *p, CollisionInfo *result) {
+    CollisionCircle *circle = (CollisionCircle *) c->collider;
+    CollisionPolygon *polygon = (CollisionPolygon *) p->collider;
+    result->collision = false;
+    result->a = c;
+    result->b = p;
+    result->depth = INFINITY;
 
-  Copyright © Kadir Aksoy
-  https://github.com/kadir014/nova-physics
+    Vector vertices[4];
+    Vector lineAWorld, lineBWorld, circleWorld, circleRadWorld, circleScale;
+    //transform circle onto world space
+    circleRadWorld = (Vector) {circle->radius, circle->radius};
+    get_matrix_scale(&(c->transform->modelMatrix), &circleScale);
+    vector_mul_components(&circleScale, &circleRadWorld, &circleRadWorld);
+    matrix_mul_vector(&(c->transform->modelMatrix), &(c->transform->position), &circleWorld);
 
-*/
+    Vector va, vb, projected;
+    for (uint8_t i = 0; i < polygon->count; i++) {
+        va = vertices[i];
+        vb = vertices[(i + 1) % polygon->count];
 
-#include <stdbool.h>
-#include "./collision.h"
-#include "./array.h"
-#include "./math.h"
-#include "./constants.h"
-#include "./aabb.h"
+        //transform line segment onto world space
+        matrix_mul_vector(&(p->transform->modelMatrix), &va, &va);
+        matrix_mul_vector(&(p->transform->modelMatrix), &vb, &vb);
 
+        //project circle onto the line
+        if (vector_project(va, vb, &projected)) {
+            float length = vector_magnitude(projected);
+            if (length > circleRadWorld) continue;
 
-/**
- * collision.c
- * 
- * Collision detection functions
- */
-
-
-nv_Resolution nv_collide_circle_x_circle(nv_Body *a, nv_Body *b) {
-    nv_Resolution res = {
-        .collision = false,
-        .a = a,
-        .b = b,
-        .normal = nv_Vector2_zero,
-        .depth = 0.0
-        };
-
-    double dist = nv_Vector2_dist(b->position, a->position);
-    double radii = a->radius + b->radius;
-
-    // Circles aren't colliding
-    if (dist >= radii) return res;
-
-    res.collision = true;
-
-    nv_Vector2 normal = nv_Vector2_sub(b->position, a->position);
-    // If the bodies are in the exact same position, direct the normal upwards
-    if (nv_Vector2_len2(normal) == 0.0) normal = (nv_Vector2){0.0, 1.0};
-    else normal = nv_Vector2_normalize(normal);
-
-    res.normal = normal;
-    res.depth = radii - dist;
-
-    return res;
+            result->depth = circleRadWorld - length;
+            result->collision = true;
+            vector_div_components(&circleWorld, &projected, &projected);
+            vector_normalized(&projected, &(result->normal));
+            return;
+        }
+    }
 }
 
-nv_Resolution nv_collide_polygon_x_circle(nv_Body *polygon, nv_Body *circle) {
-    nv_Resolution res = {
-        .collision = false,
-        .a = polygon,
-        .b = circle,
-        .normal = nv_Vector2_zero,
-        .depth = NV_INF
-        };
-
-    nv_Array *vertices = nv_Polygon_model_to_world(polygon);
-
-    size_t n = vertices->size;
-
-    double min_a, min_b, max_a, max_b;
-
-    for (size_t i = 0; i < n; i++) {
-        nv_Vector2 va = *(nv_Vector2 *)vertices->data[i];
-        nv_Vector2 vb = *(nv_Vector2 *)vertices->data[(i + 1) % n];
-
-        nv_Vector2 edge = nv_Vector2_sub(vb, va);
-        nv_Vector2 axis = nv_Vector2_normalize(nv_Vector2_perp(edge));
-
-        nv_project_polyon(vertices, axis, &min_a, &max_a);
-        nv_project_circle(circle->position, circle->radius, axis, &min_b, &max_b);
-
-        // Doesn't collide
-        if (min_a >= max_b || min_b >= max_a) {
-            nv_Array_free_each(vertices, free);
-            nv_Array_free(vertices);
-            return res;
-        }
-
-        double axis_depth = nv_minf(max_b - min_a, max_a - min_b);
-
-        if (axis_depth < res.depth) {
-            res.depth = axis_depth;
-            res.normal = axis;
+void poly_center_and_range(Vector **points, int length, Vector *center, float *radius) {
+    float r = 0;
+    for (int i = 0; i < count; i++) {
+        center.x += points[i].x;
+        center.y += points[i].y;
+        r = vector_magnitude(points[i]);
+        if (radius > r) {
+            radius = r;
         }
     }
-
-    nv_Vector2 cp = nv_polygon_closest_vertex_to_circle(circle->position, vertices);
-
-    nv_Vector2 axis = nv_Vector2_normalize(nv_Vector2_sub(cp, circle->position));
-
-    nv_project_polyon(vertices, axis, &min_a, &max_a);
-    nv_project_circle(circle->position, circle->radius, axis, &min_b, &max_b);
-
-    // Doesn't collide
-    if (min_a >= max_b || min_b >= max_a) {
-        nv_Array_free_each(vertices, free);
-        nv_Array_free(vertices);
-        return res;
-    }
-
-    double axis_depth = nv_minf(max_b - min_a, max_a - min_b);
-
-    if (axis_depth < res.depth) {
-        res.depth = axis_depth;
-        res.normal = axis;
-    }
-
-    nv_Vector2 direction = nv_Vector2_sub(polygon->position, circle->position);
-
-    if (nv_Vector2_dot(direction, res.normal) > 0.0)
-        res.normal = nv_Vector2_neg(res.normal);
-
-    res.collision = true;
-
-    nv_Array_free_each(vertices, free);
-    nv_Array_free(vertices);
-
-    return res;
+    center.x /= (float) count;
+    center.y /= (float) count;
 }
 
-nv_Resolution nv_collide_polygon_x_polygon(nv_Body *a, nv_Body *b) {
-    nv_Resolution res = {
-        .collision = false,
-        .a = a,
-        .b = b,
-        .normal = nv_Vector2_zero,
-        .depth = NV_INF
-        };
+void poly_poly_collision(PhysicsBody *a, PhysicsBody *b, CollisionInfo *result) {
+    result->collision = false;
+    result->a = a;
+    result->b = b;
+    result->depth = 0;
+    result->normal = VECTOR_ZERO;
 
-    nv_Array *vertices_a = nv_Polygon_model_to_world(a);
-    nv_Array *vertices_b = nv_Polygon_model_to_world(b);
+    Vector aCenter = {0, 0}, bCenter = {0, 0};
+    float aRadius = 0, bRadius = 0;
+    CollisionPolygon *pca = (CollisionPolygon *) a->collider;
+    CollisionPolygon *pcb = (CollisionPolygon *) b->collider;
 
-    size_t na = vertices_a->size;
-    size_t nb = vertices_b->size;
+    poly_center_and_range(&(pca->v), pca->count, &aCenter, &aRadius);
+    poly_center_and_range(&(pcb->v), pcb->count, &bCenter, &bRadius);
 
-    size_t i;
+    float dist = vector_distance(aCenter, bCenter);
+    if (dist > (aRadius + bRadius)) return;
 
-    double min_a, max_a, min_b, max_b;
+    Vector intersection, u, v, w, projected;
+    Vector A1, A2, B1, B2;
 
-    for (i = 0; i < na; i++) {
-        nv_Vector2 va = *(nv_Vector2 *)vertices_a->data[i];
-        nv_Vector2 vb = *(nv_Vector2 *)vertices_a->data[(i + 1) % na];
+    for (uint8_t i = 0; i < pca->count; i++) {
+        A1 = vertices[i];
+        A2 = vertices[(i + 1) % pca->count];
 
-        nv_Vector2 edge = nv_Vector2_sub(vb, va);
-        nv_Vector2 axis = nv_Vector2_normalize(nv_Vector2_perpr(edge));
+        for (uint8_t j = 0; j < pcb->count; j++) {
+            B1 = vertices[j];
+            B2 = vertices[(j + 1) % pcb->count];
 
-        nv_project_polyon(vertices_a, axis, &min_a, &max_a);
-        nv_project_polyon(vertices_b, axis, &min_b, &max_b);
+            vector_sub(&A2, &A1, &u);
+            vector_sub(&B2, &B1, &v);
+            vector_sub(&A1, &B1, &w);
+            float D = vector_cross(&u, &v);
+            if (D == 0) continue;
 
-        // Doesn't collide
-        if (min_a >= max_b || min_b >= max_a) {
-            nv_Array_free_each(vertices_a, free);
-            nv_Array_free_each(vertices_b, free);
-            nv_Array_free(vertices_a);
-            nv_Array_free(vertices_b);
-            return res;
-        }
+            float t = vector_cross(&v, &w) / D;
+            // The intersection is outside the line segment A
+            if (t < 0 || t > 1) continue;
 
-        double axis_depth = nv_minf(max_b - min_a, max_a - min_b);
+            float s = vector_cross(&u, &w) / D;
+            // The intersection is outside the line segment B
+            if (s < 0 || s > 1) continue;
 
-        if (axis_depth < res.depth) {
-            res.depth = axis_depth;
-            res.normal = axis;
-        }
-    }
+            intersection.x = A1.x + t * u.x;
+            intersection.y = A1.y + t * u.y;
+            result->collision = true;
 
-    for (i = 0; i < nb; i++) {
-        nv_Vector2 va = *(nv_Vector2 *)vertices_b->data[i];
-        nv_Vector2 vb = *(nv_Vector2 *)vertices_b->data[(i + 1) % na];
-
-        nv_Vector2 edge = nv_Vector2_sub(vb, va);
-        nv_Vector2 axis = nv_Vector2_normalize(nv_Vector2_perpr(edge));
-
-        nv_project_polyon(vertices_a, axis, &min_a, &max_a);
-        nv_project_polyon(vertices_b, axis, &min_b, &max_b);
-
-        // Doesn't collide
-        if (min_a >= max_b || min_b >= max_a) {
-            nv_Array_free_each(vertices_a, free);
-            nv_Array_free_each(vertices_b, free);
-            nv_Array_free(vertices_a);
-            nv_Array_free(vertices_b);
-            return res;
-        }
-
-        double axis_depth = nv_minf(max_b - min_a, max_a - min_b);
-
-        if (axis_depth < res.depth) {
-            res.depth = axis_depth;
-            res.normal = axis;
-        }
-    }
-
-    nv_Vector2 center_a = nv_Vector2_add(nv_polygon_centroid(a->vertices), a->position);
-    nv_Vector2 center_b = nv_Vector2_add(nv_polygon_centroid(b->vertices), b->position);
-
-    if (nv_Vector2_dot(nv_Vector2_sub(center_b, center_a), res.normal) < 0.0)
-        res.normal = nv_Vector2_neg(res.normal);
-
-    res.collision = true;
-
-    nv_Array_free_each(vertices_a, free);
-    nv_Array_free_each(vertices_b, free);
-    nv_Array_free(vertices_a);
-    nv_Array_free(vertices_b);
-
-    return res;
-}
-
-
-bool nv_point_x_polygon(nv_Vector2 point, nv_Array *vertices) {
-    // https://stackoverflow.com/a/48760556
-    size_t n = vertices->size;
-    size_t i = 0;
-    size_t j = n - 1;
-    bool inside = false;
-
-    while (i < n) {
-        nv_Vector2 vi = *(nv_Vector2 *)vertices->data[i];
-        nv_Vector2 vj = *(nv_Vector2 *)vertices->data[j];
-
-        if ((vi.y > point.y) != (vj.y > point.y) && (point.x < (vj.x - vi.x) * 
-            (point.y - vi.y) / (vj.y - vi.y) + vi.x )) {
-                inside = !inside;
+            // maybe allow multiple collisions? the current approach stops at one
+            // and because of that it can take several cycles to resolve the overlaps
+            result->normal = {u.y, -u.x};
+            vector_normalized(&(result->normal), &(result->normal));
+            vector_project(intersection, &normal, &A1, &projected);
+            result->depth = vector_magnitude(&projected);
+            vector_sub(intersection, &bCenter, &w);
+            if (vector_dot(&w, &result->normal) < 0) {
+                // Make sure the normal points from body b to body a
+                result->normal.x = -result->normal.x;
+                result->normal.y = -result->normal.y;
             }
-
-        j = i;
-        i += i;
+            //return on first collision
+            return;
+        }
     }
+}
 
-    return inside;
+void circle_circle_collision(PhysicsBody *a, PhysicsBody *b, CollisionInfo *result) {
+    CollisionCircle *collider_a = (CollisionCircle *) a->collider;
+    CollisionCircle *collider_b = (CollisionCircle *) b->collider;
+    result->collision = false;
+    result->a = a;
+    result->b = b;
+    result->depth = 0;
+    result->normal = VECTOR_ZERO;
+    double dist = vector_distance(&(b->world_pos), &(a->world_pos));
+    double radii = collider_a->radius + collider_b->radius;
+    if (dist >= radii) return;
+
+    result->collision = true;
+    Vector normal = vector_sub(&(b->world_pos), &(a->world_pos));
+    if (vector_magnitude(&normal) == 0) result->normal = {0, 1};
+    else vector_normalized(&normal, &(result->normal));
+    result->depth = radii - dist;
 }
 
 
-bool nv_collide_aabb_x_aabb(nv_AABB a, nv_AABB b) {
-    return (!(a.max_x <= b.min_x || b.max_x <= a.min_x ||
-              a.max_y <= b.min_y || b.max_y <= a.min_y));
-}
-
-bool nv_collide_aabb_x_point(nv_AABB aabb, nv_Vector2 point) {
-    return (aabb.min_x <= point.x && point.x <= aabb.max_x &&
-            aabb.min_y <= point.y && point.y <= aabb.max_y);
+void collide(PhysicsBody *a, PhysicsBody *b, CollisionInfo *result) {
+    if (a->type == CircleCollider && b->type == CircleCollider)
+        circle_circle_collision(a, b, result);
+    else if (a->type == CircleCollider && b->type == PolygonCollider)
+        circle_poly_collision(a, b, result);
+    else if (a->type = PolygonCollider && b->type == CircleCollider)
+        circle_circle_collision(b, a, result);
+    else if (a->type == PolygonCollider && b->type == PolygonCollider)
+        poly_poly_collision(a, b, result);
 }
