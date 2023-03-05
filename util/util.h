@@ -1,7 +1,6 @@
 #pragma once
 #include <furi.h>
-#define DEBUG
-
+#include "../config.h"
 #ifdef DEBUG
     #define allocate(X) local_allocate( X, __FILE__, __LINE__, __FUNCTION__)
     #define release(X) local_free( X, __FILE__, __LINE__, __FUNCTION__)

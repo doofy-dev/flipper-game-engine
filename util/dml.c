@@ -26,8 +26,8 @@ quadratic_2d(const Vector *const start, const Vector *const control, const Vecto
 }
 
 void vector_perpendicular(const Vector *const a, Vector *dst) {
-    dst.x = -a.y;
-    dst.y = a.x;
+    dst->x = -a->y;
+    dst->y = a->x;
 }
 
 void vector_add(const Vector *const a, const Vector *const b, Vector *dst) {
@@ -56,8 +56,8 @@ void vector_div_components(const Vector *const a, const Vector *const b, Vector 
 }
 
 void vector_div(const Vector *const a, float b, Vector *dst) {
-    dst->a.x = a->x / b;
-    dst->a.y = a->y / b;
+    dst->x = a->x / b;
+    dst->y = a->y / b;
 }
 
 void vector_normalized(const Vector *const a, Vector *dst) {
@@ -84,13 +84,7 @@ float vector_dot_normalized(const Vector *const a, const Vector *b) {
 }
 
 float vector_dot(const Vector *const a, const Vector *b) {
-    return a.x * b.x + a.y * b.y;
-}
-
-float vector_distance(const Vector *const a, const Vector *b) {
-    Vector _a;
-    vector_sub(a, b, &_a);
-    return sqrt(vector_dot(_a, _a));
+    return a->x * b->x + a->y * b->y;
 }
 
 void vector_rotate(const Vector *const a, float degrees, Vector *dst) {
@@ -98,16 +92,16 @@ void vector_rotate(const Vector *const a, float degrees, Vector *dst) {
     dst->y = (float) sin(degrees) * a->x + (float) cos(degrees) * a->y;
 }
 
-void vector_project(const Vector *const lineA, const Vector *const lineB, const Vector *const point, Vector *dst) {
+bool vector_project(const Vector *const lineA, const Vector *const lineB, const Vector *const point, Vector *dst) {
     Vector AB, AC;
     vector_sub(point, lineA, &AB);
     vector_sub(lineB, lineA, &AC);
 
-    float k = vector_dot(AC, AB) / vector_dot(AB, AB);
+    float k = vector_dot(&AC, &AB) / vector_dot(&AB, &AB);
     if (l_abs(k) < 0 || l_abs(k) > 1) return false;
 
-    dst.x = k * AB.x + lineA.x;
-    dst.y = k * AB.y + lineA.y;
+    dst->x = k * AB.x + lineA->x;
+    dst->y = k * AB.y + lineA->y;
     return true;
 }
 
@@ -137,13 +131,13 @@ void translation_matrix(const Vector *const pos, Matrix *m) {
     m->data[8] = 1;
 }
 
-void scale_matrix(const Vector *const scale, Matrix *m) {
-    m->data[0] = scale->x;
+void scale_matrix(float scale, Matrix *m) {
+    m->data[0] = scale;//x
     m->data[1] = 0;
     m->data[2] = 0;
 
     m->data[3] = 0;
-    m->data[4] = scale->y;
+    m->data[4] = scale;//y
     m->data[5] = 0;
 
     m->data[6] = 0;

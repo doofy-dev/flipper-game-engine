@@ -51,7 +51,7 @@ void draw_color_as(uint8_t *canvas, sprite_t *const sprite, bool is_black,
 
     Vector scale;
     Vector position;
-    float rotation = get_matrix_rotation(m);
+    float rotation = get_matrix_rotation(m) - M_PI_2;
     get_matrix_scale(m, &scale);
     get_matrix_translation(m, &position);
 
@@ -243,8 +243,10 @@ ImageAsset *new_image_asset(const Icon *icon) {
 }
 
 void clear_image_assets() {
+
     if (images == NULL)
         return;
+    FURI_LOG_I("FlipperGameEngine", "Clearing images");
 
     t_ListItem *item = images->start;
     if (item != NULL) {
@@ -262,6 +264,7 @@ void clear_image_assets() {
         }
     }
     list_clear(images);
+    list_free(images);
 }
 
 void copy_to_screen_buffer(uint8_t *src, uint8_t *dst) {

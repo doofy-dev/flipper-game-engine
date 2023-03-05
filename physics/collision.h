@@ -1,9 +1,10 @@
 #pragma once
+#include "physics.h"
 #include "../objects.h"
 #include "../util/dml.h"
 
 typedef struct {
-    Entity *a, *b;
+    PhysicsBody *a, *b;
     Vector normal;
     float depth;
     bool collision;

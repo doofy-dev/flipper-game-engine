@@ -1,9 +1,17 @@
 #include "list.h"
 #include <furi.h>
 #include "util.h"
+void list_clear_check(List *list, const char *file, int line, const char *func){
+    FURI_LOG_D("FlipperGameEngine", "[CLEAR LIST] %s:%s():%i", file, func, line);
+    list_clear_local(list);
+}
+void* make_list_check(size_t size, const char *file, int line, const char *func){
+    FURI_LOG_D("FlipperGameEngine", "[MAKE LIST] %s:%s():%i", file, func, line);
 
+    return make_list_local(size);
+}
 
-List *make_list(size_t item_size) {
+List *make_list_local(size_t item_size) {
     List *l = allocate(sizeof(List));
     l->count = 0;
     l->item_size = item_size;
@@ -91,7 +99,7 @@ bool list_splice(List *list, uint32_t index, uint32_t count) {
     }
 }
 
-void list_clear(List *list) {
+void list_clear_local(List *list) {
     t_ListItem *item = list->start;
     while (item) {
         t_ListItem *t = item;
@@ -101,8 +109,7 @@ void list_clear(List *list) {
             release(t->data);
         release(t);
     }
-/*    release(item->data);
-    release(item);*/
+
     list->count = 0;
 }
 

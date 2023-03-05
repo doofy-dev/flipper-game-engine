@@ -11,7 +11,7 @@ typedef struct Component component_t;
 
 struct Transform {
     Vector position;
-    Vector scale;
+    float scale;
     float rotation;
     entity_t *entity;
     entity_t *parent;
@@ -57,13 +57,13 @@ void add_to_entity(entity_t *parent, entity_t *child);
 
 Vector world_space_pos(entity_t *e);
 Vector get_position(entity_t *e);
-Vector get_scale(entity_t *e);
+float get_scale(entity_t *e);
 float get_rotation(entity_t *e);
 
 void add_position(transform_t *t, Vector amount);
 void set_position(transform_t *t, Vector position);
 void add_rotation(transform_t *t, float degree);
 void set_rotation(transform_t *t, float degree);
-void add_scale(transform_t *t, Vector amount);
-void set_scale(transform_t *t, Vector scale);
+void add_scale(transform_t *t, float amount);
+void set_scale(transform_t *t, float scale);
 void update_transform(transform_t *t);

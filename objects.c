@@ -18,10 +18,11 @@ entity_t *new_entity(const char *name) {
     e->transform.position = (Vector) {0, 0};
     e->transform.rotation = 0;
     e->transform.dirty = true;
-    e->transform.scale = (Vector) {1, 1};
+    e->transform.scale = 1;
     e->components = make_list(sizeof(component_t));
     e->sprite.anchor = (Vector) {0, 0};
     e->transform.children = make_list(sizeof(transform_t));
+    identity_matrix(&(e->transform.modelMatrix));
     e->transform.entity = e;
     e->sprite.draw_mode = BlackOnly;
     return e;
@@ -119,7 +120,7 @@ void update_transform(transform_t *t) {
     t->dirty = false;
     translation_matrix(&(t->position), &m_translate);
     rotation_matrix(t->rotation, &m_rotate);
-    scale_matrix(&(t->scale), &m_scale);
+    scale_matrix(t->scale, &m_scale);
     matrix_multiply(&m_translate, &m_rotate, &m_transform);
     matrix_multiply(&m_transform, &m_scale, &(t->modelMatrix));
 
@@ -154,12 +155,12 @@ void set_rotation(transform_t *t, float degree) {
     t->dirty = true;
 }
 
-void add_scale(transform_t *t, Vector amount) {
-    vector_add(&(t->scale), &amount, &(t->scale));
+void add_scale(transform_t *t, float amount) {
+    t->scale += amount;
     t->dirty = true;
 }
 
-void set_scale(transform_t *t, Vector scale) {
+void set_scale(transform_t *t, float scale) {
     t->scale = scale;
     t->dirty = true;
 }
@@ -175,7 +176,7 @@ Vector get_position(entity_t *e) {
     return e->transform.position;
 }
 
-Vector get_scale(entity_t *e) {
+float get_scale(entity_t *e) {
     return e->transform.scale;
 }
 
