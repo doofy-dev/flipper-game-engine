@@ -16,7 +16,7 @@ entity_t *new_entity(const char *name) {
     e->draw = false;
     e->name = name;
     e->transform.position = (Vector) {0, 0};
-    e->transform.rotation = 0;
+    e->transform.rotation = 0;//(float)M_PI_2;
     e->transform.dirty = true;
     e->transform.scale = 1;
     e->components = make_list(sizeof(component_t));
@@ -116,7 +116,6 @@ void add_to_entity(entity_t *parent, entity_t *child) {
 Matrix m_translate, m_rotate, m_scale, m_transform;
 
 void update_transform(transform_t *t) {
-    t_ListItem *e = t->children->start;
     t->dirty = false;
     translation_matrix(&(t->position), &m_translate);
     rotation_matrix(t->rotation, &m_rotate);
@@ -130,6 +129,7 @@ void update_transform(transform_t *t) {
         t->modelMatrix = res;
     }
 
+    t_ListItem *e = t->children->start;
     while (e) {
         update_transform(&(((entity_t *) e->data)->transform));
         e = e->next;

@@ -98,7 +98,7 @@ bool vector_project(const Vector *const lineA, const Vector *const lineB, const 
     vector_sub(lineB, lineA, &AC);
 
     float k = vector_dot(&AC, &AB) / vector_dot(&AB, &AB);
-    if (l_abs(k) < 0 || l_abs(k) > 1) return false;
+    if (l_abs(k) <= 0 || l_abs(k) > 1) return false;
 
     dst->x = k * AB.x + lineA->x;
     dst->y = k * AB.y + lineA->y;

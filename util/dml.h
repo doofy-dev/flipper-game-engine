@@ -4,11 +4,13 @@
 
 #pragma once
 #include <furi.h>
+#include <math.h>
 
 #define min(a, b) ((a)<(b)?(a):(b))
 #define max(a, b) ((a)>(b)?(a):(b))
-#define l_abs(x) (x<0?-x:x)
-#define M_PI 3.141592653589793238462643383279502884
+#define l_abs(x) ((x) < 0 ? -(x) : (x))
+//#define M_PI 3.141592653589793238462643383279502884
+//#define M_PI_2 1.57079632679489661923
 
 typedef struct {
     float x;

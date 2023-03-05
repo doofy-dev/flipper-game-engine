@@ -51,3 +51,5 @@ ImageAsset *new_image_asset(const Icon *icon);
 void clear_image_assets();
 void clear_buffer(uint8_t* src);
 void copy_to_screen_buffer(uint8_t* src, uint8_t* dst);
+void draw_line(uint8_t *canvas, int x0, int y0, int x1, int y1, PixelColor mode);
+void draw_circle(uint8_t *canvas, int x0, int y0, int r, PixelColor  mode);

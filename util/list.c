@@ -2,11 +2,11 @@
 #include <furi.h>
 #include "util.h"
 void list_clear_check(List *list, const char *file, int line, const char *func){
-    FURI_LOG_D("FlipperGameEngine", "[CLEAR LIST] %s:%s():%i", file, func, line);
+    FURI_LOG_D("FlipperGameEngine", "[CLEAR LIST] %s:%s():%i", basename((char*)file), func, line);
     list_clear_local(list);
 }
 void* make_list_check(size_t size, const char *file, int line, const char *func){
-    FURI_LOG_D("FlipperGameEngine", "[MAKE LIST] %s:%s():%i", file, func, line);
+    FURI_LOG_D("FlipperGameEngine", "[MAKE LIST] %s:%s():%i", basename((char*)file), func, line);
 
     return make_list_local(size);
 }

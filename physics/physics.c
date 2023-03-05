@@ -51,6 +51,9 @@ void process_physics_body(PhysicsBody *body, float time) {
 }
 
 void add_physics_body(entity_t *entity, PhysicsBody *physicsBody) {
+    if(physics_bodies==NULL)
+        physics_bodies = make_list(sizeof(PhysicsBody));
+
     entity->physicsBody = physicsBody;
     physicsBody->transform = &(entity->transform);
 
@@ -67,6 +70,7 @@ void physics_clear() {
         item = item->next;
     }
     list_clear(physics_bodies);
+    list_free(physics_bodies);
 }
 
 PhysicsBody *new_physics_body(Vector gravity, float mass, PhysicsMaterial m, bool fixed) {
@@ -99,7 +103,9 @@ void set_to_polygon_collider(PhysicsBody *pb, Vector *corners, uint8_t count) {
 
 void physics_start() {
     FURI_LOG_D("FlipperGameEngine", "Starting physics thread");
-    physics_bodies = make_list(sizeof(PhysicsBody));
+    if(physics_bodies==NULL)
+        physics_bodies = make_list(sizeof(PhysicsBody));
+
     physics_thread = furi_thread_alloc_ex(
             "PhysicsThread", 3 * 1024, physics_loop, physics_bodies);
     if (physics_thread)

@@ -12,7 +12,8 @@ void poly_compute(const Vector *points, int length, Vector *center, float *radiu
         center->x += result[i].x;
         center->y += result[i].y;
         r = vector_magnitude(&(result[i]));
-        if ((*radius) > r) {
+        //probably need to move this out from here so it can be relative based on the center
+        if ((*radius) < r) {
             (*radius) = r;
         }
     }
@@ -29,11 +30,12 @@ void circle_poly_collision(PhysicsBody *c, PhysicsBody *p, CollisionInfo *result
     result->b = p;
     result->depth = INFINITY;
 
-    Vector circleWorld, circleRadWorld, circleScale, polyCenter;
+    Vector circleWorld, circleRadWorld, polyCenter;
     //transform circle onto world space
     circleRadWorld = (Vector) {circle->radius, circle->radius};
-    get_matrix_scale(&(c->transform->modelMatrix), &circleScale);
-    vector_mul_components(&circleScale, &circleRadWorld, &circleRadWorld);
+//    get_matrix_scale(&(c->transform->modelMatrix), &circleScale);
+//    vector_mul_components(&circleScale, &circleRadWorld, &circleRadWorld);
+
     get_matrix_translation(&(c->transform->modelMatrix), &circleWorld);
     float polyRadius;
 
@@ -42,16 +44,19 @@ void circle_poly_collision(PhysicsBody *c, PhysicsBody *p, CollisionInfo *result
     //test if it is close enough
     float dist = vector_distance(&polyCenter, &circleWorld);
     if (dist > (max(circleRadWorld.x, circleRadWorld.y) + polyRadius)) return;
-    FURI_LOG_D("COLLIDE", "in range");
     Vector va, vb, projected;
     for (uint8_t i = 0; i < polygon->count; i++) {
         va = vertices[i];
         vb = vertices[(i + 1) % polygon->count];
 
+//        FURI_LOG_D("TEST", "testing vert %s\t %f %f \t %f %f \t %f %f \t %f %f ", c->transform->entity->name, (double)va.x, (double)va.y, (double)vb.x, (double)vb.y, (double)projected.x, (double)projected.y, (double)circleWorld.x, (double)circleWorld.y);
         //project circle onto the line
         if (vector_project(&va, &vb, &circleWorld, &projected)) {
+//            FURI_LOG_D("COLLIDE", "testing vert %s\t %f %f \t %f %f \t %f %f \t %f %f ", c->transform->entity->name, (double)va.x, (double)va.y, (double)vb.x, (double)vb.y, (double)projected.x, (double)projected.y, (double)circleWorld.x, (double)circleWorld.y);
             float length = vector_magnitude(&projected);
+//            FURI_LOG_D("COLLIDE", "before range check %f %f", (double) length, (double) circleRadWorld.x);
             if (length > circleRadWorld.x) continue;
+            FURI_LOG_D("COLLIDE", "range %s", c->transform->entity->name);
 
             result->depth = circleRadWorld.x - length;
             result->collision = true;

@@ -13,7 +13,7 @@
 
 #define CHECK_HEAP() FURI_LOG_I("FlipperGameEngine", "Free/total heap: %zu / %zu", memmgr_get_free_heap(), memmgr_get_total_heap())
 
-
+char *basename(const char *path);
 void* local_allocate(size_t size, const char *file, int line, const char *func);
 void local_free(void *p, const char *file, int line, const char *func);
 void check_ptr(void *p, const char *file, int line, const char *func);

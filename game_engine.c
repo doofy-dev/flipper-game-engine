@@ -15,7 +15,7 @@ bool should_work = true;
 
 #ifdef DRAW_COLLIDERS
 
-void draw_colliders(Canvas *const canvas) {
+void draw_colliders(uint8_t *canvas) {
     List *c = get_colliders();
     check_pointer(c);
     if (c == NULL) return;
@@ -30,15 +30,20 @@ void draw_colliders(Canvas *const canvas) {
         if (body == NULL || body->collider == NULL) return;
         if (body->type == CircleCollider) {
             get_matrix_translation(&(body->transform->modelMatrix), &a);
-            canvas_draw_circle(canvas,ceil(a.x), ceil(a.y),
-                               ((CollisionCircle *) body->collider)->radius);
+            draw_circle(canvas,ceil(a.x), ceil(a.y),
+                               ((CollisionCircle *) body->collider)->radius, Black);
         } else if (body->type == PolygonCollider) {
-            Vector *items = ((CollisionPolygon *) body->collider)->v;
             int count = ((CollisionPolygon *) body->collider)->count;
+            Vector *items = ((CollisionPolygon *) body->collider)->v;
+            Vector result[4];
             for (int i = 0; i < count; i++) {
-                matrix_mul_vector(&(body->transform->modelMatrix), &(items[i]), &a);
-                matrix_mul_vector(&(body->transform->modelMatrix), &(items[(i + 1) % count]), &b);
-                canvas_draw_line(canvas, a.x, a.y, b.x, b.y);
+                matrix_mul_vector(&(body->transform->modelMatrix), &(items[i]), &(result[i]));
+            }
+
+            for (int i = 0; i < count; i++) {
+                a=result[i];
+                b=result[(i + 1) % count];
+                draw_line(canvas, a.x, a.y, b.x, b.y, Black);
             }
         }
         item = item->next;
@@ -65,6 +70,11 @@ static int32_t render_thread(void *ctx) {
                 if (s.image->asset->loaded)
                     draw_buffer_scaled(worker->buffer, s.image, &(s.matrix));
             }
+#ifdef DRAW_COLLIDERS
+            draw_colliders(worker->buffer);
+#endif
+
+
             frame_time = (int32_t) 1000 / (furi_get_tick() - start);
             release_mutex((ValueMutex *) ctx, worker);
         }
@@ -112,9 +122,6 @@ static void render(Canvas *const canvas, void *ctx) {
     }
     copy_to_screen_buffer(queue->buffer, get_buffer(canvas));
 
-#ifdef DRAW_COLLIDERS
-    draw_colliders(canvas);
-#endif
 
     char str[80];
     snprintf(str, sizeof(str), "%ld", frame_time);
@@ -178,7 +185,6 @@ int32_t setup_engine(SetupState state) {
     engineState->buffer_thread = furi_thread_alloc_ex(
             "BackBufferThread", 1024, render_thread, &(engineState->render_mutex));
     furi_thread_start(engineState->buffer_thread);
-    physics_start();
     return 0;
 }
 
@@ -220,6 +226,8 @@ void start_loop() {
 
     AppEvent event;
     engineState->processing = true;
+
+    physics_start();
 
     FURI_LOG_I("FlipperGameEngine", "Entering main loop");
     while (engineState->processing) {
@@ -282,6 +290,7 @@ void init_tree(List *items) {
                 c->start(&(c->componentInfo), engineState->game_state);
                 component = component->next;
             }
+            update_transform(&(e->transform));
             init_tree(e->transform.children);
         }
         curr = curr->next;

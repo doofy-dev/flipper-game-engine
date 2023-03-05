@@ -2,7 +2,7 @@
 
 #include <furi.h>
 #include "../config.h"
-
+#include "util.h"
 #ifdef DEBUG
     #define make_list(X) make_list_check( X, __FILE__, __LINE__, __FUNCTION__)
     #define list_clear(X) list_clear_check( X, __FILE__, __LINE__, __FUNCTION__)

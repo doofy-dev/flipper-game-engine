@@ -39,19 +39,12 @@ bool read_pixel(Canvas *const canvas, int16_t x, int16_t y) {
     return false;
 }
 
-uint8_t pixels[1024];
-
 void draw_color_as(uint8_t *canvas, sprite_t *const sprite, bool is_black,
                    PixelColor draw_color, const Matrix *const m) {
-    uint8_t *column = pixels;
-    for (uint16_t i = 0; i < 1024; i++) {
-        (*column) = 0;
-        column++;
-    }
-
     Vector scale;
     Vector position;
-    float rotation = get_matrix_rotation(m) - M_PI_2;
+    Vector anchor;
+    float rotation = get_matrix_rotation(m);
     get_matrix_scale(m, &scale);
     get_matrix_translation(m, &position);
 
@@ -64,8 +57,6 @@ void draw_color_as(uint8_t *canvas, sprite_t *const sprite, bool is_black,
     float xInc = sprite->size.x / (float) new_w;
     float yInc = sprite->size.y / (float) new_h;
 
-/*    new_w = min(new_w, SCREEN_WIDTH);
-    new_h = min(new_h, SCREEN_HEIGHT);*/
     uint16_t test_pixel_x;
     float pixel_x = 0;
     float pixel_y = 0;
@@ -73,25 +64,84 @@ void draw_color_as(uint8_t *canvas, sprite_t *const sprite, bool is_black,
     int16_t _x, _y;
 
     int16_t __x, __y;
-    float cos_theta = cos(rotation);
-    float sin_theta = sin(rotation);
+    float cos_theta = cos(rotation - M_PI_2);
+    float sin_theta = sin(rotation - M_PI_2);
+
+    anchor.x = sprite->anchor.x * sprite->size.x;
+    anchor.y = sprite->anchor.y * sprite->size.y;
+
     for (_x = 0; _x < new_w; _x++) {
         test_pixel_x = (int16_t) round(pixel_x);
         pixel_y = 0;
         for (_y = 0; _y < new_h; _y++) {
             // Perform rotation
-            __x = (int16_t) round((_x - new_w / 2.0) * cos_theta - (_y - new_h / 2.0) * sin_theta + new_w / 2.0 + offsetX);
-            __y = (int16_t) round((_x - new_w / 2.0) * sin_theta + (_y - new_h / 2.0) * cos_theta + new_h / 2.0 + offsetY);
+            __x = _x - anchor.x;
+            __y = _y - anchor.y;
+            float rot_x = (__x) * cos_theta - (__y) * sin_theta;
+            float rot_y = (__x) * sin_theta + (__y) * cos_theta;
+
+            __x = (int16_t) round(rot_x + anchor.x + offsetX);
+            __y = (int16_t) round(rot_y + anchor.y + offsetY);
 
             if (__y < SCREEN_HEIGHT && __y >= 0 && __x >= 0 && __x < SCREEN_WIDTH) {
-                isOn = test_pixel(sprite->asset->data, test_pixel_x, (int16_t) round(pixel_y), sprite->size.x) == is_black;
-                set_pixel(pixels, __x, __y, SCREEN_WIDTH, draw_color);
+                isOn = test_pixel(sprite->asset->data, test_pixel_x, (int16_t) round(pixel_y), sprite->size.x) ==
+                       is_black;
                 if (isOn)
                     set_pixel(canvas, __x, __y, SCREEN_WIDTH, draw_color);
             }
             pixel_y += yInc;
         }
         pixel_x += xInc;
+    }
+}
+
+void set_pixel_with_check(uint8_t *buffer, int16_t x, int16_t y, uint8_t sw, PixelColor draw_mode) {
+    if (x >= 0 && x < 128 && y >= 0 && y < 64)
+        set_pixel(buffer, x, y, sw, draw_mode);
+}
+
+void draw_line(uint8_t *canvas, int x0, int y0, int x1, int y1, PixelColor mode) {
+    int dx = abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+    int dy = abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+    int err = (dx > dy ? dx : -dy) / 2;
+
+    while (1) {
+        set_pixel_with_check(canvas, x0, y0, SCREEN_WIDTH, mode);
+        if (x0 == x1 && y0 == y1) break;
+        int e2 = err;
+        if (e2 > -dx) {
+            err -= dy;
+            x0 += sx;
+        }
+        if (e2 < dy) {
+            err += dx;
+            y0 += sy;
+        }
+    }
+}
+
+void draw_circle(uint8_t *canvas, int x0, int y0, int r, PixelColor color) {
+    int16_t x = r;
+    int16_t y = 0;
+    int16_t decision = 1 - x;
+
+    while (y <= x) {
+        set_pixel_with_check(canvas, x + x0, y + y0, SCREEN_WIDTH, color);
+        set_pixel_with_check(canvas, y + x0, x + y0, SCREEN_WIDTH, color);
+        set_pixel_with_check(canvas, -x + x0, y + y0, SCREEN_WIDTH, color);
+        set_pixel_with_check(canvas, -y + x0, x + y0, SCREEN_WIDTH, color);
+        set_pixel_with_check(canvas, -x + x0, -y + y0, SCREEN_WIDTH, color);
+        set_pixel_with_check(canvas, -y + x0, -x + y0, SCREEN_WIDTH, color);
+        set_pixel_with_check(canvas, x + x0, -y + y0, SCREEN_WIDTH, color);
+        set_pixel_with_check(canvas, y + x0, -x + y0, SCREEN_WIDTH, color);
+
+        y++;
+        if (decision <= 0) {
+            decision += 2 * y + 1;
+        } else {
+            x--;
+            decision += 2 * (y - x) + 1;
+        }
     }
 }
 
