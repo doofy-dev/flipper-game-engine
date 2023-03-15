@@ -61,13 +61,18 @@ void vector_div(const Vector *const a, float b, Vector *dst) {
 }
 
 void vector_normalized(const Vector *const a, Vector *dst) {
-    float length = vector_magnitude(a);
-    dst->x = a->x / length;
-    dst->y = a->y / length;
+    float magnitude = vector_magnitude(a);
+    if (magnitude == 0) {
+        dst->x = 0;
+        dst->y = 0;
+    } else {
+        dst->x = a->x / magnitude;
+        dst->y = a->y / magnitude;
+    }
 }
 
 float vector_magnitude(const Vector *const a) {
-    return sqrt(a->x * a->x + a->y * a->y);
+    return sqrtf(a->x * a->x + a->y * a->y);
 }
 
 float vector_distance(const Vector *const a, const Vector *b) {
@@ -94,14 +99,14 @@ void vector_rotate(const Vector *const a, float degrees, Vector *dst) {
 
 bool vector_project(const Vector *const lineA, const Vector *const lineB, const Vector *const point, Vector *dst) {
     Vector AB, AC;
-    vector_sub(point, lineA, &AB);
-    vector_sub(lineB, lineA, &AC);
+    vector_sub(lineB, lineA, &AB);
+    vector_sub(point, lineA, &AC);
 
     float k = vector_dot(&AC, &AB) / vector_dot(&AB, &AB);
-    if (l_abs(k) <= 0 || l_abs(k) > 1) return false;
-
+    if (k < 0 || k > 1) return false;
     dst->x = k * AB.x + lineA->x;
     dst->y = k * AB.y + lineA->y;
+
     return true;
 }
 

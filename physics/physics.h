@@ -6,6 +6,7 @@
 
 #include <furi.h>
 #define PHYSICS_UPDATE_MS 10
+#define PHYSICS_SUB_STEPS 2
 
 #define MAX_POLY_SIZE 4
 

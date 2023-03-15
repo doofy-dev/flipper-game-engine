@@ -18,7 +18,7 @@ void process_physics_body(PhysicsBody *body, float time) {
     vector_mul(&(body->gravity), time, &tmp);
     vector_add(&tmp, &(body->acceleration), &(body->acceleration));
     float velocity_magnitude = vector_magnitude(&(body->velocity));
-    Vector up=(Vector){0,1};
+    Vector up = (Vector) {0, 1};
     float normal_force = vector_dot(&(body->gravity), &up);
 
     Vector friction_force = {0, 0};
@@ -31,9 +31,14 @@ void process_physics_body(PhysicsBody *body, float time) {
     } else {
         float friction_coeff = body->material.static_friction;
         float friction_magnitude = friction_coeff * normal_force;
+        if (friction_magnitude > vector_magnitude(&(body->acceleration))) {
+            friction_force = body->acceleration;
+            vector_mul(&friction_force, -1, &friction_force);
+        } else {
 
-        vector_normalized(&(body->acceleration), &tmp);
-        vector_mul(&tmp, -friction_magnitude, &friction_force);
+            vector_normalized(&(body->acceleration), &tmp);
+            vector_mul(&tmp, -friction_magnitude, &friction_force);
+        }
     }
     vector_add(&(body->acceleration), &friction_force, &(body->acceleration));
 
@@ -51,7 +56,7 @@ void process_physics_body(PhysicsBody *body, float time) {
 }
 
 void add_physics_body(entity_t *entity, PhysicsBody *physicsBody) {
-    if(physics_bodies==NULL)
+    if (physics_bodies == NULL)
         physics_bodies = make_list(sizeof(PhysicsBody));
 
     entity->physicsBody = physicsBody;
@@ -69,7 +74,6 @@ void physics_clear() {
 
         item = item->next;
     }
-    list_clear(physics_bodies);
     list_free(physics_bodies);
 }
 
@@ -103,7 +107,7 @@ void set_to_polygon_collider(PhysicsBody *pb, Vector *corners, uint8_t count) {
 
 void physics_start() {
     FURI_LOG_D("FlipperGameEngine", "Starting physics thread");
-    if(physics_bodies==NULL)
+    if (physics_bodies == NULL)
         physics_bodies = make_list(sizeof(PhysicsBody));
 
     physics_thread = furi_thread_alloc_ex(
@@ -113,6 +117,8 @@ void physics_start() {
     else
         FURI_LOG_D("FlipperGameEngine", "Cannot start physics");
 }
+
+#define physics_time 1.0f
 
 static int32_t physics_loop(void *ctx) {
     UNUSED(ctx);
@@ -131,38 +137,43 @@ static int32_t physics_loop(void *ctx) {
     while (physics_process) {
         uint32_t curr = furi_get_tick();
         uint32_t diff = curr - last_time;
+        UNUSED(diff);
         if (last_time > 0) {
             //update positions
-            item = physics_bodies->start;
-            while (item) {
-                if (item->data) {
-                    body = (PhysicsBody *) item->data;
-                    process_physics_body(body, (float) diff / PHYSICS_UPDATE_MS);
-                }
-                item = item->next;
-            }
-
-            item = physics_bodies->start;
-            CollisionInfo info;
-
-            //Check and resolve collisions
-            item = physics_bodies->start;
-            while (item) {
-                t_ListItem *item2 = item->next;
-                while (item2) {
-                    collide((PhysicsBody *) item->data, (PhysicsBody *) item2->data, &info);
-                    if (info.collision) {
-                        FURI_LOG_D("FlipperGameEngine", "%s collided with %s", info.a->transform->entity->name, info.b->transform->entity->name);
-
-                        fix_position(&info);
-                        resolve_bouncing(&info);
-//                        resolve_friction(&info);
+            float delta =  ((float)diff / PHYSICS_UPDATE_MS) / PHYSICS_SUB_STEPS;
+            for (int i = 0; i < PHYSICS_SUB_STEPS; i++) {
+                item = physics_bodies->start;
+                while (item) {
+                    if (item->data) {
+                        body = (PhysicsBody *) item->data;
+                        process_physics_body(body, delta);
                     }
-                    //resolve...
-
-                    item2 = item2->next;
+                    item = item->next;
                 }
-                item = item->next;
+
+                item = physics_bodies->start;
+                CollisionInfo info;
+
+                //Check and resolve collisions
+                item = physics_bodies->start;
+                while (item) {
+                    t_ListItem *item2 = item->next;
+                    while (item2) {
+                        collide((PhysicsBody *) item->data, (PhysicsBody *) item2->data, &info);
+                        if (info.collision) {
+                            FURI_LOG_D("FlipperGameEngine", "%s collided with %s", info.a->transform->entity->name,
+                                       info.b->transform->entity->name);
+
+                            fix_position(&info);
+                            resolve_bouncing(&info);
+
+                            resolve_friction(&info, delta);
+                        }
+
+                        item2 = item2->next;
+                    }
+                    item = item->next;
+                }
             }
         }
         last_time = curr;

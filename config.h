@@ -1,3 +1,3 @@
 #pragma once
 #define DEBUG
-//#define DRAW_COLLIDERS
+#define DRAW_COLLIDERS

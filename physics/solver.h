@@ -3,4 +3,4 @@
 
 void fix_position(CollisionInfo *info);
 void resolve_bouncing(CollisionInfo *info);
-void resolve_friction(CollisionInfo *info);
+void resolve_friction(CollisionInfo *info, float delta);

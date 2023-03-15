@@ -287,7 +287,8 @@ void init_tree(List *items) {
             t_ListItem *component = e->components->start;
             while (component) {
                 component_t *c = (component_t *) component->data;
-                c->start(&(c->componentInfo), engineState->game_state);
+                if(c->start != NULL)
+                    c->start(&(c->componentInfo), engineState->game_state);
                 component = component->next;
             }
             update_transform(&(e->transform));

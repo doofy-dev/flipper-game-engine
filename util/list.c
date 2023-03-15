@@ -100,6 +100,8 @@ bool list_splice(List *list, uint32_t index, uint32_t count) {
 }
 
 void list_clear_local(List *list) {
+    if(list == NULL) return;
+
     t_ListItem *item = list->start;
     while (item) {
         t_ListItem *t = item;

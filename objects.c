@@ -113,6 +113,12 @@ void add_to_entity(entity_t *parent, entity_t *child) {
     child->transform.parent = parent;
 }
 
+void add_sprite(entity_t *e, const Icon *icon, Vector anchor){
+    e->sprite= load_sprite(icon);
+    e->draw=true;
+    e->sprite.anchor=anchor;
+}
+
 Matrix m_translate, m_rotate, m_scale, m_transform;
 
 void update_transform(transform_t *t) {

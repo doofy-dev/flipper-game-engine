@@ -6,22 +6,26 @@
 
 void poly_compute(const Vector *points, int length, Vector *center, float *radius, Vector *result, const Matrix *m) {
     float r = 0;
+    Vector diff;
     for (int i = 0; i < length; i++) {
         matrix_mul_vector(m, &(points[i]), &(result[i]));
-
         center->x += result[i].x;
         center->y += result[i].y;
-        r = vector_magnitude(&(result[i]));
-        //probably need to move this out from here so it can be relative based on the center
+    }
+    center->x /= (float) length;
+    center->y /= (float) length;
+
+    for (int i = 0; i < length; i++) {
+        vector_sub(&(result[i]), center, &diff);
+        r = vector_magnitude(&diff);
         if ((*radius) < r) {
             (*radius) = r;
         }
     }
-    center->x /= (float) length;
-    center->y /= (float) length;
 }
 
 Vector vertices[4];
+
 void circle_poly_collision(PhysicsBody *c, PhysicsBody *p, CollisionInfo *result) {
     CollisionCircle *circle = (CollisionCircle *) c->collider;
     CollisionPolygon *polygon = (CollisionPolygon *) p->collider;
@@ -33,8 +37,6 @@ void circle_poly_collision(PhysicsBody *c, PhysicsBody *p, CollisionInfo *result
     Vector circleWorld, circleRadWorld, polyCenter;
     //transform circle onto world space
     circleRadWorld = (Vector) {circle->radius, circle->radius};
-//    get_matrix_scale(&(c->transform->modelMatrix), &circleScale);
-//    vector_mul_components(&circleScale, &circleRadWorld, &circleRadWorld);
 
     get_matrix_translation(&(c->transform->modelMatrix), &circleWorld);
     float polyRadius;
@@ -45,23 +47,21 @@ void circle_poly_collision(PhysicsBody *c, PhysicsBody *p, CollisionInfo *result
     float dist = vector_distance(&polyCenter, &circleWorld);
     if (dist > (max(circleRadWorld.x, circleRadWorld.y) + polyRadius)) return;
     Vector va, vb, projected;
+    int count = polygon->count;
+    if (count == 2) count = 1;
     for (uint8_t i = 0; i < polygon->count; i++) {
         va = vertices[i];
         vb = vertices[(i + 1) % polygon->count];
 
-//        FURI_LOG_D("TEST", "testing vert %s\t %f %f \t %f %f \t %f %f \t %f %f ", c->transform->entity->name, (double)va.x, (double)va.y, (double)vb.x, (double)vb.y, (double)projected.x, (double)projected.y, (double)circleWorld.x, (double)circleWorld.y);
         //project circle onto the line
         if (vector_project(&va, &vb, &circleWorld, &projected)) {
-//            FURI_LOG_D("COLLIDE", "testing vert %s\t %f %f \t %f %f \t %f %f \t %f %f ", c->transform->entity->name, (double)va.x, (double)va.y, (double)vb.x, (double)vb.y, (double)projected.x, (double)projected.y, (double)circleWorld.x, (double)circleWorld.y);
-            float length = vector_magnitude(&projected);
-//            FURI_LOG_D("COLLIDE", "before range check %f %f", (double) length, (double) circleRadWorld.x);
+            float length = vector_distance(&projected, &circleWorld);
             if (length > circleRadWorld.x) continue;
-            FURI_LOG_D("COLLIDE", "range %s", c->transform->entity->name);
 
             result->depth = circleRadWorld.x - length;
             result->collision = true;
-            vector_div_components(&circleWorld, &projected, &projected);
-            vector_normalized(&projected, &(result->normal));
+            vector_sub(&circleWorld, &projected, &(result->normal));
+            vector_normalized(&(result->normal), &(result->normal));
             return;
         }
     }
@@ -91,11 +91,15 @@ void poly_poly_collision(PhysicsBody *a, PhysicsBody *b, CollisionInfo *result) 
     Vector intersection, u, v, w, projected;
     Vector A1, A2, B1, B2;
 
-    for (uint8_t i = 0; i < pca->count; i++) {
+    int acount = pca->count;
+    if (acount == 2) acount = 1;
+    int bcount = pcb->count;
+    if (bcount == 2) bcount = 1;
+    for (uint8_t i = 0; i < acount; i++) {
         A1 = polyA[i];
         A2 = polyA[(i + 1) % pca->count];
 
-        for (uint8_t j = 0; j < pcb->count; j++) {
+        for (uint8_t j = 0; j < bcount; j++) {
             B1 = polyB[j];
             B2 = polyB[(j + 1) % pcb->count];
 
@@ -119,11 +123,11 @@ void poly_poly_collision(PhysicsBody *a, PhysicsBody *b, CollisionInfo *result) 
 
             // maybe allow multiple collisions? the current approach stops at one
             // and because of that it can take several cycles to resolve the overlaps
-            result->normal = (Vector){u.y, -u.x};
+            result->normal = (Vector) {u.y, -u.x};
             vector_normalized(&(result->normal), &(result->normal));
             projected.x = A1.x + result->normal.x * t * u.x;
             projected.y = A1.y + result->normal.y * t * u.y;
-            result->depth = (float)sqrt(projected.x * projected.x + projected.y * projected.y);
+            result->depth = (float) sqrt(projected.x * projected.x + projected.y * projected.y);
             result->depth = vector_magnitude(&projected);
             vector_sub(&intersection, &bCenter, &w);
             if (vector_dot(&w, &result->normal) < 0) {
@@ -136,7 +140,9 @@ void poly_poly_collision(PhysicsBody *a, PhysicsBody *b, CollisionInfo *result) 
         }
     }
 }
-Vector ca,cb;
+
+Vector ca, cb;
+
 void circle_circle_collision(PhysicsBody *a, PhysicsBody *b, CollisionInfo *result) {
     CollisionCircle *collider_a = (CollisionCircle *) a->collider;
     CollisionCircle *collider_b = (CollisionCircle *) b->collider;
@@ -155,8 +161,17 @@ void circle_circle_collision(PhysicsBody *a, PhysicsBody *b, CollisionInfo *resu
     Vector normal;
     vector_sub(&ca, &cb, &normal);
 
-    if (vector_magnitude(&normal) == 0) result->normal = (Vector){0, 1};
+    if (vector_magnitude(&normal) == 0) result->normal = (Vector) {0, 1};
     else vector_normalized(&normal, &(result->normal));
+
+    vector_sub(&ca, &cb, &normal);
+    vector_normalized(&normal,&normal);
+    if (vector_dot(&normal, &result->normal) < 0) {
+        // Make sure the normal points from body b to body a
+        result->normal.x = -result->normal.x;
+        result->normal.y = -result->normal.y;
+    }
+
     result->depth = radii - dist;
 }
 

@@ -61,6 +61,7 @@ float get_scale(entity_t *e);
 float get_rotation(entity_t *e);
 
 void add_position(transform_t *t, Vector amount);
+void add_sprite(entity_t *e, const Icon *icon, Vector anchor);
 void set_position(transform_t *t, Vector position);
 void add_rotation(transform_t *t, float degree);
 void set_rotation(transform_t *t, float degree);
