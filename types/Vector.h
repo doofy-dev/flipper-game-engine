@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cmath>
-#include "Helpers.h"
+#include "../Helpers.h"
 
 struct Vector {
     float x;
@@ -73,6 +73,18 @@ struct Vector {
     void rotate(float deg) {
         x = cos(deg) * x - sin(deg) * y;
         y = sin(deg) * x + cos(deg) * y;
+    }
+
+    void rounded(){
+        x = (float)round(x);
+        y = (float)round(y);
+    }
+
+    Vector rotated(float deg) {
+        return {
+                (float) (cos(deg) * x - sin(deg) * y),
+                (float) (sin(deg) * x + cos(deg) * y)
+        };
     }
 
     float cross(Vector const &other) {

@@ -6,14 +6,14 @@
 
 class RenderBuffer : public Buffer {
     Canvas *canvas;
-    int render_count = 0;
+    uint8_t render_count = 0;
     RenderInfo render_list[32];
 
     void draw_sprite(Sprite *const sprite, bool is_black,
-                     PixelColor draw_color, const Matrix *const m);
+                     PixelColor draw_color, const Matrix &m);
 
 public:
-    RenderBuffer(Canvas *canvas);
+    explicit RenderBuffer(Canvas *canvas);
 
     void render();
 
@@ -27,10 +27,7 @@ public:
 
     void draw_circle(int x, int y, int r, PixelColor draw_mode);
 
-    void draw_scaled(Sprite *const sprite, const Matrix *const m);
+    void draw_scaled(Sprite *const sprite, const Matrix &m);
 
-    void set_pixel(int16_t x, int16_t y, PixelColor draw_mode);
-
-    void set_pixel_with_check(int16_t x, int16_t y, PixelColor draw_mode);
-
+    void swap();
 };

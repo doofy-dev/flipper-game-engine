@@ -22,12 +22,6 @@ enum PixelColor {
     Flip   //not
 };
 
-struct ImageAsset {
-    uint8_t *data;
-    const Icon *icon;
-    bool loaded;
-};
-
 struct RenderInfo {
     Sprite *image;
     Matrix matrix;

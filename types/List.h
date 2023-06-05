@@ -1,7 +1,6 @@
 #pragma once
 
 #include <furi.h>
-#include "Helpers.h"
 
 template<typename T>
 struct ListItem {
@@ -27,15 +26,16 @@ struct List {
             t = item;
             item = item->next;
             if (t->data)
-                release(t->data);
-            release(t);
+                delete t->data;
+            delete t;
         }
         count = 0;
     }
 
     void empty() {
         clear();
-        release(start);
+        if(start)
+            delete start;
     }
 
     void add(T *data) {
@@ -45,10 +45,10 @@ struct List {
             while (c->next) {
                 c = c->next;
             }
-            c->next = static_cast<ListItem<T>*>(allocate(sizeof(ListItem<T>)));
+            c->next = new ListItem<T>();
             c->next->data = data;
         } else {
-            start = static_cast<ListItem<T>*>(allocate(sizeof(ListItem<T>)));
+            start = new ListItem<T>();
             start->data = data;
         }
     }
@@ -58,15 +58,15 @@ struct List {
 
         ListItem<T> *s = start;
         if (s->data == data) {
-            release(s->data);
+            delete s->data;
             start = start->next;
             count--;
         } else {
             while (s) {
                 if (s->next && s->next->data == data) {
                     auto n = s->next->next;
-                    release(s->next->data);
-                    release(s->next);
+                    delete s->next->data;
+                    delete s->next;
                     s->next = n;
                     count--;
                     return;
@@ -91,8 +91,8 @@ struct List {
             for (uint32_t i = 0; i < m; i++) {
                 t = s->next;
                 if (s->data)
-                    release(s->data);
-                release(s);
+                    delete s->data;
+                delete s;
                 s = t->next;
             }
             if (index == 0) {
