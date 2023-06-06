@@ -13,9 +13,11 @@ Engine::~Engine() {
         if (notification_app)
             notification_message_block(notification_app, &sequence_display_backlight_enforce_auto);
 
-        if (active_scene)
-            delete active_scene;
+
+        delete active_scene;
     }
+
+    delete buffer;
 
     furi_pubsub_unsubscribe(input, input_subscription);
     canvas = NULL;
@@ -27,10 +29,13 @@ Engine::~Engine() {
 
 void Engine::Stop() {
     processing = false;
-    release(instance);
+    delete instance;
 }
 
 Engine::Engine(const char *name, uint8_t f, bool alwaysOn) {
+    if (instance)
+        FURI_LOG_E("FlipperGameEngine", "Only one engine instance can be present!");
+
     instance = this;
     app_name = name;
     fps = f;
@@ -43,7 +48,7 @@ Engine::Engine(const char *name, uint8_t f, bool alwaysOn) {
     canvas = gui_direct_draw_acquire(gui);
     input_subscription = furi_pubsub_subscribe(instance->input, &input_callback, this);
 
-    buffer = Buffer(canvas, gui);
+    buffer = new RenderBuffer(canvas);
     render_mutex = (FuriMutex *) furi_mutex_alloc(FuriMutexTypeNormal);
 
     if (!render_mutex) {

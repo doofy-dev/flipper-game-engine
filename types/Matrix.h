@@ -4,7 +4,11 @@
 #include "Vector.h"
 
 struct Matrix {
-    float data[9];
+    float data[9] = {
+            1,0,0,
+            0,1,0,
+            0,0,1
+    };
 
     void Identity() {
         data[0] = 1;
@@ -41,8 +45,8 @@ struct Matrix {
     static Matrix RotationMatrix(float angle) {
         return {
                 {
-                        (float) (cos(angle)), (float) (-sin(angle)), 0,
-                        (float) (sin(angle)), (float) (cos(angle)), 0,
+                        (float) cos(angle), (float) -sin(angle), 0,
+                        (float) sin(angle), (float) cos(angle), 0,
                         0, 0, 1
                 }
         };
@@ -66,12 +70,12 @@ struct Matrix {
         };
     }
 
-    Vector translation() const{
+    Vector translation() const {
         return {data[2], data[5]};
     }
 
-    float rotation() const{
-        return (float)atan2(data[0], data[1]);
+    float rotation() const {
+        return (float) atan2(data[0], data[1]);
     }
 
     Vector scale() const {

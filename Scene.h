@@ -19,4 +19,6 @@ public:
     void Start();
     void Update(const uint32_t &delta);
     void ProcessPhysics(const uint32_t &time);
+
+    bool is_started(){return started;}
 };
