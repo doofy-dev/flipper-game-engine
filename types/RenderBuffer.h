@@ -7,13 +7,21 @@
 class RenderBuffer : public Buffer {
     Canvas *canvas;
     uint8_t render_count = 0;
+    Buffer *front_buffer;
     RenderInfo render_list[32];
+    bool ready=false;
+    bool redraw= true;
+    bool double_buffered=false;
+    FuriMutex *mutex;
 
     void draw_sprite(Sprite *const sprite, bool is_black,
                      PixelColor draw_color, const Matrix &m);
 
 public:
-    explicit RenderBuffer(Canvas *canvas);
+    RenderBuffer(Canvas *canvas);
+    RenderBuffer(Canvas *canvas, bool doubleBuffer);
+
+    virtual ~RenderBuffer();
 
     void render();
 
@@ -30,4 +38,5 @@ public:
     void draw_scaled(Sprite *const sprite, const Matrix &m);
 
     void swap();
+    void swap(uint8_t *&buffer) override;
 };

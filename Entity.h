@@ -1,20 +1,27 @@
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "modernize-deprecated-headers"
 #pragma once
 
 #include <string.h>
-#include "furi.h"
+#include <typeinfo>
 #include "types/Transform.h"
+#include <gui/icon.h>
+#include <furi_hal_resources.h>
+#include "types/Component.h"
+#include "types/Input.h"
+#include "physics/PhysicsBody.h"
 
 class Scene;
 
-class Component;
+class Sprite;
 
 class Entity {
     const char *name;
     Scene *scene = nullptr;
     Transform transform;
     List<Component> components;
+    bool enabled = true;
+    Sprite *sprite;
+    PhysicsBody *physicsBody;
+
 public:
     Entity(const char *name);
 
@@ -22,18 +29,60 @@ public:
 
     ~Entity();
 
-    void Update(const uint32_t &delta);
+    void OnInput(InputKey key, InputState type);
 
-    Transform *Transform() { return &transform; }
+    void Update(const float &delta);
+
+    Transform *get_transform() { return &transform; }
 
     void SetScene(Scene *s);
 
     template<typename T>
-    void AddComponent();
-
-    bool operator==(const char *other) const {
-        return strcmp(name, other) == 0;
+    void AddComponent() {
+        T *t = new T();
+        t->set_entity(this);
+        components.add(t);
     }
-};
 
-#pragma clang diagnostic pop
+    template<typename T, typename... Args>
+    void AddComponent(Args &&... args) {
+       /* if (typeid(T) == typeid(PhysicsBody)) {
+            physicsBody = new PhysicsBody(args...);
+            physicsBody->set_entity(this);
+        } else {*/
+            T *t = new T(args...);
+            t->set_entity(this);
+            components.add(t);
+//        }
+    }
+
+/*
+    template<>
+    template<typename... Args>
+    void AddComponent<PhysicsBody>(Args &&... args){
+        physicsBody = new PhysicsBody(args...);
+        physicsBody->set_entity(this);
+    }
+*/
+
+    template<typename T>
+    T *GetComponent() {
+        auto *t = components.start;
+        while (t) {
+            if (typeid(*(t->data)) == typeid(T)) {
+                return t->data;
+            }
+            t = t->next;
+        }
+        return nullptr;
+    }
+
+    void set_active(bool active);
+
+    bool is_active() const;
+
+    void set_sprite(const Icon *icon);
+
+    Sprite *get_sprite();
+
+};

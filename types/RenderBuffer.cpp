@@ -5,29 +5,28 @@
 #include "RenderBuffer.h"
 #include "Sprite.h"
 #include "../Helpers.h"
+#include "../../defines.h"
 #include <gui/canvas_i.h>
 #include <u8g2_glue.h>
 
 RenderBuffer::RenderBuffer(Canvas *c) : Buffer(canvas_width(c), canvas_height(c)), canvas(c) {
+    LOG_D("New renderBuffer");
+    mutex = (FuriMutex *) furi_mutex_alloc(FuriMutexTypeNormal);
 
 }
 
-
-void RenderBuffer::swap() {
-    uint8_t *back = canvas->fb.tile_buf_ptr;
-    canvas->fb.tile_buf_ptr = data;
-    data = back;
+RenderBuffer::RenderBuffer(Canvas *c, bool doubleBuffer) : Buffer(canvas_width(c), canvas_height(c)), canvas(c) {
+    LOG_D("New renderBuffer");
+    if (doubleBuffer)
+        front_buffer = new Buffer(canvas_width(c), canvas_height(c));
+    double_buffered = doubleBuffer;
+    mutex = (FuriMutex *) furi_mutex_alloc(FuriMutexTypeNormal);
 }
 
-void RenderBuffer::render() {
-//    canvas_reset(canvas);
-
-    swap();
-    canvas_commit(canvas);
-}
 
 void RenderBuffer::reset() {
     render_count = 0;
+    redraw=true;
 }
 
 void RenderBuffer::add_to_queue(Sprite *sprite, const Matrix &matrix) {
@@ -36,7 +35,40 @@ void RenderBuffer::add_to_queue(Sprite *sprite, const Matrix &matrix) {
     render_count++;
 }
 
+void RenderBuffer::swap() {
+    uint8_t *back = canvas->fb.tile_buf_ptr;
+    canvas->fb.tile_buf_ptr = data;
+    data = back;
+}
+
+void RenderBuffer::swap(uint8_t *&buffer) {
+    uint8_t *back = canvas->fb.tile_buf_ptr;
+    canvas->fb.tile_buf_ptr = buffer;
+    buffer = back;
+}
+
+
+void RenderBuffer::render() {
+    furi_mutex_acquire(mutex, FuriWaitForever);
+    if (double_buffered) {
+        swap(front_buffer->data);
+    } else {
+        swap();
+//        front_buffer->copy_from(canvas->fb.tile_buf_ptr);
+    }
+    furi_mutex_release(mutex);
+
+    canvas_commit(canvas);
+}
+
 void RenderBuffer::draw() {
+    ready = false;
+    if(!redraw) return;
+    redraw= false;
+
+    if (!double_buffered)
+        furi_mutex_acquire(mutex, FuriWaitForever);
+
     clear();
     for (uint8_t i = 0; i < render_count; i++) {
         RenderInfo info = render_list[i];
@@ -44,13 +76,18 @@ void RenderBuffer::draw() {
         if (info.image == NULL) {
             continue;
         }
-        if(!info.image->is_loaded())
-        {
+        if (!info.image->is_loaded()) {
             info.image->render(canvas);
         }
 
         draw_scaled(info.image, info.matrix);
     }
+    if (double_buffered) {
+        furi_mutex_acquire(mutex, FuriWaitForever);
+        front_buffer->swap(data);
+    }
+    furi_mutex_release(mutex);
+    ready = true;
 }
 
 void RenderBuffer::draw_line(int x0, int y0, int x1, int y1, PixelColor draw_mode) {
@@ -123,9 +160,38 @@ void RenderBuffer::draw_scaled(Sprite *const sprite, const Matrix &m) {
             break;
     }
 }
+#define newRender
+#ifdef newRender
+void RenderBuffer::draw_sprite(Sprite *const sprite, bool is_black, PixelColor draw_color, const Matrix &m) {
+    Vector scale = m.scale();
+    Vector position = m.translation();
+    float rotation = m.rotation();
+    Vector anchor = sprite->get_offset();
+    float cosTheta = std::cos(rotation+M_PI_2);
+    float sinTheta = std::sin(rotation+M_PI_2);
 
-void RenderBuffer::draw_sprite(Sprite *const sprite, bool is_black, PixelColor draw_color,
-                               const Matrix &m) {
+    for (int y = 0; y < sprite->height(); y++) {
+        for (int x = 0; x < sprite->width(); x++) {
+            float transformedX = (x - anchor.x) * scale.x;
+            float transformedY = (y - anchor.y) * scale.y;
+            float rotatedX = transformedX * cosTheta - transformedY * sinTheta;
+            float rotatedY = transformedX * sinTheta + transformedY * cosTheta;
+
+            int16_t finalX = (int16_t) round(rotatedX + position.x);
+            int16_t finalY = (int16_t) round(rotatedY + position.y);
+            if (test_coordinate(finalX, finalY)) {
+                bool isOn = sprite->test_pixel(x, y) == is_black;
+                if (isOn)
+                    set_pixel(finalX, finalY, draw_color);
+            }
+
+        }
+    }
+
+}
+
+#else
+void RenderBuffer::draw_sprite(Sprite *const sprite, bool is_black, PixelColor draw_color, const Matrix &m) {
     Vector scale = m.scale();
     Vector position = m.translation();
     Vector anchor, coord;
@@ -170,4 +236,14 @@ void RenderBuffer::draw_sprite(Sprite *const sprite, bool is_black, PixelColor d
         }
         realCoord.x += xInc;
     }
+}
+#endif
+
+RenderBuffer::~RenderBuffer() {
+    LOG_D("RenderBuffer end");
+
+    check_pointer(front_buffer);
+    if (double_buffered && front_buffer)
+        delete front_buffer;
+    furi_mutex_free(mutex);
 }

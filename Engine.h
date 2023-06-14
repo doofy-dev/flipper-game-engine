@@ -32,6 +32,8 @@ class Engine {
     bool thread_loop = false;
     static Engine *instance;
 
+    List<SpriteMap> sprite_map;
+
     static void input_callback(const void *value, void *ctx);
 
 public:
@@ -44,8 +46,16 @@ public:
     void Stop();
 
     void SetScene(Scene *scene);
+    static void OnInput(Engine *inst, InputKey key, InputState type);
+
+    Sprite * LoadSprite(Icon *icon);
 
     static int32_t render_thread(void *ctx);
 
     static Engine *get_instance() { return instance; }
+
+    void QueueSprite(Sprite *s, const Matrix &matrix);
+
+    InputState GetInput(InputKey key);
+
 };

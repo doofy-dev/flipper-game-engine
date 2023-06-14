@@ -1,18 +1,34 @@
 #pragma once
-#include "furi.h"
 
-#ifdef DEBUG
-    #define check_pointer(X) check_ptr( X, __FILE__, __LINE__, __FUNCTION__)
+# define M_PIX2		6.28318530717958647692	/* pi */
+#include "furi.h"
+void furi_log_print_format(int, const char*, const char*, ...);
+#define DEBUG_BUILD
+#ifdef DEBUG_BUILD
+#define check_pointer(X) check_ptr( X, __FILE__, __LINE__, __FUNCTION__)
+#define LOG_I(msg, ...) furi_log_print_format(FuriLogLevelInfo,  "FlipperGameEngine", "\033[1;32m[%s:%s():%i]\033[0m\t" msg, basename((char*) __FILE__), __func__, __LINE__, ##__VA_ARGS__)
+#define LOG_W(msg, ...) furi_log_print_format(FuriLogLevelWarn,  "FlipperGameEngine", "\033[1;32m[%s:%s():%i]\033[0m\t" msg, basename((char*) __FILE__), __func__, __LINE__, ##__VA_ARGS__)
+#define LOG_D(msg, ...) furi_log_print_format(FuriLogLevelDebug,  "FlipperGameEngine", "\033[1;32m[%s:%s():%i]\033[0m\t" msg, basename((char*) __FILE__), __func__, __LINE__, ##__VA_ARGS__)
+#define LOG_E(msg, ...) furi_log_print_format(FuriLogLevelError,  "FlipperGameEngine", "\033[1;32m[%s:%s():%i]\033[0m\t" msg, basename((char*) __FILE__), __func__, __LINE__, ##__VA_ARGS__)
 #else
 #define check_pointer(X) while(0)
+#define LOG_I(msg, ...) while(0)
+#define LOG_W(msg, ...) while(0)
+#define LOG_D(msg, ...) while(0)
+#define LOG_E(msg, ...) while(0)
 #endif
 
 #define CHECK_HEAP() FURI_LOG_I("FlipperGameEngine", "Free/total heap: %zu / %zu", memmgr_get_free_heap(), memmgr_get_total_heap())
-
 char *basename(const char *path);
+
 void check_ptr(void *p, const char *file, int line, const char *func);
 
-float lerp(float a, float b, float t) {
-    if (t > 1) return b;
-    return (1 - t) * a + t * b;
-}
+float lerp(float a, float b, float t);
+
+class LogTimer{
+    double start;
+    const char* name;
+public:
+    explicit LogTimer(const char* name);
+    ~LogTimer();
+};

@@ -1,6 +1,6 @@
 #pragma once
-
 #include <furi.h>
+#include "../Helpers.h"
 
 template<typename T>
 struct ListItem {
@@ -11,22 +11,27 @@ struct ListItem {
 template<typename T>
 struct List {
     uint32_t count;
-    ListItem<T> *start;
+    ListItem<T> *start = nullptr;
 
     List() : count(0) {}
 
     ~List() {
+        LOG_D("List emptied");
+
         empty();
     }
 
     void clear() {
-        auto item = start;
+        auto *item = start;
         ListItem<T> *t;
         while (item) {
             t = item;
             item = item->next;
-            if (t->data)
+            if (t->data) {
+                check_pointer(t->data);
                 delete t->data;
+            }
+            check_pointer(t);
             delete t;
         }
         count = 0;
@@ -34,8 +39,10 @@ struct List {
 
     void empty() {
         clear();
-        if(start)
+        if(start) {
+            check_pointer(start);
             delete start;
+        }
     }
 
     void add(T *data) {
@@ -58,6 +65,7 @@ struct List {
 
         ListItem<T> *s = start;
         if (s->data == data) {
+            check_pointer(s->data);
             delete s->data;
             start = start->next;
             count--;
@@ -65,6 +73,8 @@ struct List {
             while (s) {
                 if (s->next && s->next->data == data) {
                     auto n = s->next->next;
+                    check_pointer(s->next->data);
+                    check_pointer(s->next);
                     delete s->next->data;
                     delete s->next;
                     s->next = n;
@@ -90,8 +100,11 @@ struct List {
             ListItem<T> *t;
             for (uint32_t i = 0; i < m; i++) {
                 t = s->next;
-                if (s->data)
+                if (s->data) {
+                    check_pointer(s->data);
                     delete s->data;
+                }
+                check_pointer(s);
                 delete s;
                 s = t->next;
             }

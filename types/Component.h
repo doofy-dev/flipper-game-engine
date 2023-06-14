@@ -1,19 +1,34 @@
 #pragma once
+#include <furi.h>
+#include "Input.h"
+#include "../Helpers.h"
 
-#include "../Entity.h"
+class Entity;
 
 class Component {
-    Entity *entity = nullptr;
 protected:
-    bool enabled=true;
+    Entity *entity = nullptr;
+    bool enabled = true;
 public:
-    explicit Component(Entity *e):entity(e) {}
+    void set_entity(Entity *e);
+
+    virtual ~Component() {
+        LOG_D("Component cleared");
+    }
 
     virtual void Start() {}
 
     virtual void Destroy() {}
 
-    virtual void Update(const uint32_t &delta) {}
+    virtual void Update(const float &delta) { UNUSED(delta); }
 
-    bool is_enabled() const{return enabled;}
+    virtual void OnInput(InputKey key, InputState type) {
+        UNUSED(key);
+        UNUSED(type);
+    }
+
+    bool is_enabled() const { return enabled; }
+
+    InputState GetInput(InputKey key);
+
 };

@@ -39,6 +39,9 @@ void Transform::rotate(float amount) {
 
 void Transform::set_rotation(float amount) {
     rotation = amount;
+    while(rotation<0) rotation+=M_PIX2;
+    while(rotation>M_PIX2) rotation-=M_PIX2;
+
     dirty = true;
 }
 
@@ -73,4 +76,16 @@ void Transform::update_matrix() {
 
 bool Transform::is_dirty() const {
     return dirty;
+}
+
+List<Transform> *Transform::get_children() {
+    return &children;
+}
+
+Entity *Transform::get_entity() {
+    return entity;
+}
+
+Matrix Transform::get_matrix() {
+    return model_matrix;
 }

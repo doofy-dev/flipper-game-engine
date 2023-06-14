@@ -1,17 +1,23 @@
-//
-// Created by teeebor on 2023-06-04.
-//
 #include "Buffer.h"
-#include "Sprite.h"
 #include "Render.h"
 #include "Matrix.h"
+#include <gui/icon.h>
 
 Buffer::Buffer(uint8_t w, uint8_t h) : _width(w), _height(h) {
     data = (uint8_t *) malloc(sizeof(uint8_t) * w * ceil(h / 8.0));
 }
 
+Buffer::Buffer(Icon *i) {
+    _width = icon_get_width(i);
+    _height = icon_get_height(i);
+    data = (uint8_t *) malloc(sizeof(uint8_t) * _width * ceil(_height / 8.0));
+}
+
 Buffer::~Buffer() {
-    free(data);
+    LOG_D("Buffer removed");
+
+    if(data)
+        delete data;
 }
 
 bool Buffer::test_pixel(uint8_t x, uint8_t y) {
@@ -22,6 +28,13 @@ void Buffer::copy_into(uint8_t *other) {
     int size = (int) (_width * ceil(_height / 8.0));
     for (int i = 0; i < size; i++) {
         other[i] = data[i];
+    }
+}
+
+void Buffer::copy_from(uint8_t *other) {
+    int size = (int) (_width * ceil(_height / 8.0));
+    for (int i = 0; i < size; i++) {
+        data[i] = other[i];
     }
 }
 
@@ -57,5 +70,11 @@ void Buffer::set_pixel(int16_t x, int16_t y, PixelColor draw_mode) {
             *p ^= bit;
             break;
     }
+}
+
+void Buffer::swap(uint8_t *&buffer) {
+    uint8_t *back = data;
+    data = buffer;
+    buffer = back;
 }
 

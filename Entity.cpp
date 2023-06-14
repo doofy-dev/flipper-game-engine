@@ -1,7 +1,8 @@
 #include "Entity.h"
+#include "Engine.h"
 #include "Scene.h"
-#include "types/Component.h"
-#include <type_traits>
+#include <furi.h>
+#include "types/Sprite.h"
 
 void Entity::SetScene(Scene *s) {
     scene = s;
@@ -16,14 +17,24 @@ void Entity::Start() {
 }
 
 Entity::~Entity() {
+    LOG_D("Entity %s destroyed", name);
+    if (physicsBody)
+        delete physicsBody;
+
     auto start = components.start;
     while (start) {
-        start->data->Destroy();
-        start = start->next;
+        auto *t = start->next;
+        if (start->data) {
+            check_pointer(start->data);
+            start->data->Destroy();
+            delete start->data;
+        }
+        delete start;
+        start = t;
     }
 }
 
-void Entity::Update(const uint32_t &delta) {
+void Entity::Update(const float &delta) {
     auto start = components.start;
     while (start) {
         if (start->data->is_enabled())
@@ -39,8 +50,26 @@ Entity::Entity(const char *n) {
     name = n;
 }
 
-template<typename T>
-void Entity::AddComponent() {
-    static_assert(std::is_base_of<Component, T>::value, "Class must be derived from Component");
-    components.add(new T(this));
+void Entity::set_active(bool active) {
+    enabled = active;
+}
+
+bool Entity::is_active() const {
+    return enabled;
+}
+
+void Entity::set_sprite(const Icon *icon) {
+    sprite = Engine::get_instance()->LoadSprite(const_cast<Icon *>(icon));
+}
+
+Sprite *Entity::get_sprite() {
+    return sprite;
+}
+
+void Entity::OnInput(InputKey key, InputState type) {
+    auto *start = components.start;
+    while (start) {
+        start->data->OnInput(key, type);
+        start = start->next;
+    }
 }

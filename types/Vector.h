@@ -15,8 +15,14 @@ struct Vector {
         return *this;
     }
 
+    Vector(const Vector &other) : x(other.x), y(other.y) {}
+
+    Vector(float _x, float _y) : x(_x), y(_y) {}
+
+    Vector() : x(0), y(0) {}
+
     Vector operator+(Vector const &other) {
-        return Vector{x + other.x, y + other.y};
+        return Vector({x + other.x, y + other.y});
     }
 
     Vector operator-(Vector const &other) {
@@ -66,24 +72,30 @@ struct Vector {
         return {x / m, y / m};
     }
 
+    Vector inverse() {
+        return {-x, -y};
+    }
+
     float dot(Vector const &b) {
         return x * b.x + y * b.y;
     }
 
     void rotate(float deg) {
-        x = cos(deg) * x - sin(deg) * y;
-        y = sin(deg) * x + cos(deg) * y;
+        float tx = x;
+        float ty = y;
+        x = (float) (cos(deg) * (double) tx - sin(deg) * (double) ty);
+        y = (float) (sin(deg) * (double) tx + cos(deg) * (double) ty);
     }
 
-    void rounded(){
-        x = (float)round(x);
-        y = (float)round(y);
+    void rounded() {
+        x = (float) round(x);
+        y = (float) round(y);
     }
 
     Vector rotated(float deg) {
         return {
-                (float) (cos(deg) * x - sin(deg) * y),
-                (float) (sin(deg) * x + cos(deg) * y)
+                (float) (cos(deg) * (double) x - sin(deg) * (double) y),
+                (float) (sin(deg) * (double) x + cos(deg) * (double) y)
         };
     }
 

@@ -23,6 +23,11 @@ enum PixelColor {
 };
 
 struct RenderInfo {
-    Sprite *image;
+    Sprite *image = nullptr;
     Matrix matrix;
+};
+
+struct SpriteMap{
+    Sprite *sprite = nullptr;
+    Icon *icon = nullptr;
 };

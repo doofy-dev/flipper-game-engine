@@ -48,4 +48,10 @@ public:
     void update_matrix();
 
     bool is_dirty() const;
+
+    List<Transform> *get_children();
+
+    Entity *get_entity();
+
+    Matrix get_matrix();
 };

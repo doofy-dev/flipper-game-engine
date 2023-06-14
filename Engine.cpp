@@ -1,9 +1,31 @@
 #include "Engine.h"
+#include "types/Sprite.h"
+#include <notification/notification_messages.h>
+#include "Helpers.h"
+#include <dolphin/dolphin.h>
 
 Engine *Engine::instance = nullptr;
 
 Engine::~Engine() {
-    FURI_LOG_D("FlipperGameEngine", "Stopping render thread");
+    LOG_D("Stopping render thread");
+    check_pointer(active_scene);
+    if (active_scene)
+        delete active_scene;
+
+    auto *s = sprite_map.start;
+
+    while (s) {
+        auto *t = s->next;
+        if (s->data) {
+            if (s->data->sprite) {
+                delete s->data->sprite;
+            }
+            delete s->data;
+        }
+        delete s;
+        s = t;
+    }
+
     if (loaded) {
         if (buffer_thread) {
             thread_loop = false;
@@ -13,11 +35,10 @@ Engine::~Engine() {
         if (notification_app)
             notification_message_block(notification_app, &sequence_display_backlight_enforce_auto);
 
-
-        delete active_scene;
     }
-
-    delete buffer;
+    check_pointer(buffer);
+    if (buffer)
+        delete buffer;
 
     furi_pubsub_unsubscribe(input, input_subscription);
     canvas = NULL;
@@ -29,12 +50,15 @@ Engine::~Engine() {
 
 void Engine::Stop() {
     processing = false;
-    delete instance;
+    thread_loop = false;
+    check_pointer(instance);
+//    delete instance;
 }
 
 Engine::Engine(const char *name, uint8_t f, bool alwaysOn) {
+    LOG_D("Starting %s", name);
     if (instance)
-        FURI_LOG_E("FlipperGameEngine", "Only one engine instance can be present!");
+        LOG_E("Only one engine instance can be present!");
 
     instance = this;
     app_name = name;
@@ -48,11 +72,10 @@ Engine::Engine(const char *name, uint8_t f, bool alwaysOn) {
     canvas = gui_direct_draw_acquire(gui);
     input_subscription = furi_pubsub_subscribe(instance->input, &input_callback, this);
 
-    buffer = new RenderBuffer(canvas);
+    buffer = new RenderBuffer(canvas, true);
     render_mutex = (FuriMutex *) furi_mutex_alloc(FuriMutexTypeNormal);
 
     if (!render_mutex) {
-        FURI_LOG_E("FlipperGameEngine", "Cannot create mutex!");
         loaded = false;
         return;
     }
@@ -63,7 +86,7 @@ Engine::Engine(const char *name, uint8_t f, bool alwaysOn) {
         notification_message_block(notification_app, &sequence_display_backlight_enforce_on);
 
     buffer_thread = furi_thread_alloc_ex(
-            "BackBufferThread", 1024, render_thread, render_info);
+            "BackBufferThread", 1024, render_thread, buffer);
     loaded = true;
     processing = true;
 }
@@ -74,47 +97,60 @@ void Engine::input_callback(const void *value, void *ctx) {
 
     if (event->key == InputKeyBack && event->type == InputTypeLong)
         inst->Stop();
+    InputState type = InputUp;
 
     if (event->type == InputTypePress)
-        inst->input_states[event->key] = InputPress;
+        type = InputPress;
     else if (event->type == InputTypeLong)
-        inst->input_states[event->key] = InputDown;
+        type = InputDown;
     else if (event->type == InputTypeRelease)
-        inst->input_states[event->key] = InputRelease;
+        type = InputRelease;
+    OnInput(inst, event->key, type);
 
 }
 
 void Engine::Start() {
+    LOG_D("loop start");
+    DOLPHIN_DEED(DolphinDeedPluginGameStart);
+
     if (!active_scene) {
+        LOG_D("loop exit");
         Stop();
         return;
     }
+    thread_loop = true;
 
     furi_thread_start(buffer_thread);
     active_scene->Start();
-    vTaskPrioritySet(static_cast<TaskHandle_t>(furi_thread_get_current_id()), FuriThreadPriorityHigh);
+    vTaskPrioritySet(static_cast<TaskHandle_t>(furi_thread_get_current_id()), FuriThreadPriorityIdle);
     last_tick = furi_get_tick();
 
     while (processing) {
-        buffer.reset();
         uint32_t tick = furi_get_tick();
-        delta_tick = (tick - last_tick) / furi_kernel_get_tick_frequency();
-        active_scene->Update(delta_tick);
+        if ((tick - last_tick) > 20) {
+            buffer->reset();
+            delta_tick = (tick - last_tick);
+            active_scene->Update((float) delta_tick / 1000.0f, this);
+            buffer->render();
+            last_tick = tick;
+        }
 
-//        active_scene->ProcessPhysics(tick);
-        buffer.render();
+        //        active_scene->ProcessPhysics(tick);
 
         for (int i = 0; i < 7; i++)
             if (input_states[i] == InputRelease)
                 input_states[i] = InputUp;
+
         furi_thread_yield();
     }
 
 }
 
 void Engine::SetScene(Scene *scene) {
-    if (active_scene)
+    if (active_scene) {
+        check_pointer(active_scene);
         delete active_scene;
+    }
 
     active_scene = scene;
     if (loaded) {
@@ -124,5 +160,53 @@ void Engine::SetScene(Scene *scene) {
 
 
 int32_t Engine::render_thread(void *ctx) {
+    auto *b = (RenderBuffer *) ctx;
+    double tick = furi_get_tick();
+    vTaskPrioritySet(static_cast<TaskHandle_t>(furi_thread_get_current_id()), FuriThreadPriorityIdle);
+    while (instance->thread_loop) {
+        double t = furi_get_tick();
+        if ((t - tick) >= 1000 / Engine::instance->fps) {
+            b->draw();
+            tick = t;
+        }
+        furi_thread_yield();
+    }
     return 0;
+}
+
+Sprite *Engine::LoadSprite(Icon *icon) {
+    if (!loaded) {
+        LOG_E("Load image after engine initialization!");
+        return NULL;
+    }
+
+    auto *item = sprite_map.start;
+    while (item) {
+        if (item->data->icon == icon)
+            return item->data->sprite;
+        item = item->next;
+    }
+
+    auto *s = new Sprite(icon, BlackOnly);
+    s->render(canvas);
+
+    auto *map = new SpriteMap;
+    map->icon = icon;
+    map->sprite = s;
+    sprite_map.add(map);
+
+    return s;
+}
+
+void Engine::QueueSprite(Sprite *s, const Matrix &matrix) {
+    buffer->add_to_queue(s, matrix);
+}
+
+void Engine::OnInput(Engine *inst, InputKey key, InputState type) {
+    inst->input_states[key] = type;
+    inst->active_scene->OnInput(key, type);
+}
+
+InputState Engine::GetInput(InputKey key) {
+    return input_states[key];
 }
