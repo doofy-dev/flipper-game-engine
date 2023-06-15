@@ -29,6 +29,10 @@ struct Vector {
         return Vector{x - other.x, y - other.y};
     }
 
+    Vector operator-(Vector const &other) const {
+        return Vector{x - other.x, y - other.y};
+    }
+
     Vector operator*(Vector const &other) {
         return Vector{x * other.x, y * other.y};
     }

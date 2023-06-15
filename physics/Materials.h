@@ -1,12 +1,6 @@
 #pragma once
 
-typedef struct {
-    float density;
-    float bounciness;
-    float static_friction;
-    float dynamic_friction;
-} PhysicsMaterial;
-
+#include "types.h"
 
 static const PhysicsMaterial Material_STEEL = {
         .density = 7.8f,

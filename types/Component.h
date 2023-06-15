@@ -1,18 +1,19 @@
 #pragma once
+
 #include <furi.h>
 #include "Input.h"
 #include "../Helpers.h"
 
 class Entity;
 
-class Component {
+class ComponentBase {
 protected:
     Entity *entity = nullptr;
     bool enabled = true;
 public:
     void set_entity(Entity *e);
 
-    virtual ~Component() {
+    virtual ~ComponentBase() {
         LOG_D("Component cleared");
     }
 
@@ -31,4 +32,15 @@ public:
 
     InputState GetInput(InputKey key);
 
+    virtual int getTypeID() const = 0;
+
+};
+
+template<typename T>
+class Component : public ComponentBase {
+public:
+    int getTypeID() const override {
+        static int typeID = TypeRegistry::getTypeID<T>();
+        return typeID;
+    }
 };

@@ -1,11 +1,11 @@
 #pragma once
 
 #include <string.h>
-#include <typeinfo>
 #include "types/Transform.h"
 #include <gui/icon.h>
 #include <furi_hal_resources.h>
 #include "types/Component.h"
+#include "Helpers.h"
 #include "types/Input.h"
 #include "physics/PhysicsBody.h"
 
@@ -17,10 +17,11 @@ class Entity {
     const char *name;
     Scene *scene = nullptr;
     Transform transform;
-    List<Component> components;
+    List<ComponentBase> components;
     bool enabled = true;
     Sprite *sprite;
     PhysicsBody *physicsBody;
+    Collider *collider;
 
 public:
     Entity(const char *name);
@@ -46,33 +47,19 @@ public:
 
     template<typename T, typename... Args>
     void AddComponent(Args &&... args) {
-       /* if (typeid(T) == typeid(PhysicsBody)) {
-            physicsBody = new PhysicsBody(args...);
-            physicsBody->set_entity(this);
-        } else {*/
-            T *t = new T(args...);
-            t->set_entity(this);
-            components.add(t);
-//        }
+        ComponentBase *t = new T(args...);
+        t->set_entity(this);
+        components.add(t);
+        if (t->getTypeID() == TypeRegistry::getTypeID<PhysicsBody>()) {
+            physicsBody = static_cast<PhysicsBody *>(t);
+        }
     }
-
-/*
-    template<>
-    template<typename... Args>
-    void AddComponent<PhysicsBody>(Args &&... args){
-        physicsBody = new PhysicsBody(args...);
-        physicsBody->set_entity(this);
-    }
-*/
 
     template<typename T>
     T *GetComponent() {
-        auto *t = components.start;
-        while (t) {
-            if (typeid(*(t->data)) == typeid(T)) {
-                return t->data;
-            }
-            t = t->next;
+        for (ComponentBase *component: components) {
+            if (component->getTypeID() == TypeRegistry::getTypeID<T>())
+                return static_cast<T *>(component);
         }
         return nullptr;
     }
@@ -85,4 +72,5 @@ public:
 
     Sprite *get_sprite();
 
+    PhysicsBody *getPhysicsBody() { return physicsBody; }
 };

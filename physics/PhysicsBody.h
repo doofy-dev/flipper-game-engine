@@ -1,11 +1,11 @@
 #pragma once
 
-
 #include "../types/Vector.h"
 #include "../types/Component.h"
 #include "Materials.h"
 
-class PhysicsBody : public Component{
+struct PhysicsMaterial;
+class PhysicsBody : public Component<PhysicsBody>{
     Vector gravity;
     bool is_fixed;
     float mass;

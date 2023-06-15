@@ -3,17 +3,22 @@
 #include "Scene.h"
 #include <furi.h>
 #include "types/Sprite.h"
+#include "physics/CircleCollider.h"
+#include "physics/PolyCollider.h"
 
 void Entity::SetScene(Scene *s) {
     scene = s;
 }
 
 void Entity::Start() {
-    auto start = components.start;
-    while (start) {
-        start->data->Start();
-        start = start->next;
+    for (auto *component: components) {
+        component->Start();
     }
+
+    //store pointer to the collider for ease of access
+    auto *c = GetComponent<CircleCollider>();
+    if (c != nullptr) collider = c;
+    else collider = GetComponent<PolyCollider>();
 }
 
 Entity::~Entity() {
@@ -35,14 +40,12 @@ Entity::~Entity() {
 }
 
 void Entity::Update(const float &delta) {
-    auto start = components.start;
-    while (start) {
-        if (start->data->is_enabled())
-            start->data->Update(delta);
-        if (transform.is_dirty()) {
+
+    for (auto *component: components) {
+        if (component->is_enabled())
+            component->Update(delta);
+        if (transform.is_dirty())
             transform.update_matrix();
-        }
-        start = start->next;
     }
 }
 
@@ -67,9 +70,6 @@ Sprite *Entity::get_sprite() {
 }
 
 void Entity::OnInput(InputKey key, InputState type) {
-    auto *start = components.start;
-    while (start) {
-        start->data->OnInput(key, type);
-        start = start->next;
-    }
+    for (auto *component: components)
+        component->OnInput(key, type);
 }

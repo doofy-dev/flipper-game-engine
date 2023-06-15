@@ -180,11 +180,9 @@ Sprite *Engine::LoadSprite(Icon *icon) {
         return NULL;
     }
 
-    auto *item = sprite_map.start;
-    while (item) {
-        if (item->data->icon == icon)
-            return item->data->sprite;
-        item = item->next;
+    for(auto *sprite : sprite_map){
+        if(sprite->icon == icon)
+            return sprite->sprite;
     }
 
     auto *s = new Sprite(icon, BlackOnly);

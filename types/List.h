@@ -1,5 +1,7 @@
 #pragma once
+
 #include <furi.h>
+#include <iterator>
 #include "../Helpers.h"
 
 template<typename T>
@@ -7,6 +9,47 @@ struct ListItem {
     ListItem *next;
     T *data;
 };
+
+template<typename T>
+struct ListIterator {
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = T;
+    using difference_type = std::ptrdiff_t;
+    using pointer = T*;
+    using reference = T&;
+
+    ListItem<T>* current;
+
+    ListIterator(ListItem<T>* node) : current(node) {}
+
+    ListIterator& operator++() {
+        current = current->next;
+        return *this;
+    }
+
+    ListIterator operator++(int) {
+        ListIterator iterator = *this;
+        ++(*this);
+        return iterator;
+    }
+
+    bool operator==(const ListIterator& other) const {
+        return current == other.current;
+    }
+
+    bool operator!=(const ListIterator& other) const {
+        return !(*this == other);
+    }
+
+    T* operator*() const {
+        return (current->data);
+    }
+
+    T* operator->() const {
+        return current->data;
+    }
+};
+
 
 template<typename T>
 struct List {
@@ -39,7 +82,7 @@ struct List {
 
     void empty() {
         clear();
-        if(start) {
+        if (start) {
             check_pointer(start);
             delete start;
         }
@@ -114,4 +157,11 @@ struct List {
         }
     }
 
+    ListIterator<T> begin() {
+        return ListIterator<T>(start);
+    }
+
+    ListIterator<T> end() {
+        return ListIterator<T>(nullptr);
+    }
 };

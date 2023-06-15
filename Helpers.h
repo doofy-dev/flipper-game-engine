@@ -32,3 +32,18 @@ public:
     explicit LogTimer(const char* name);
     ~LogTimer();
 };
+
+class TypeRegistry {
+public:
+    template <typename T>
+    static int getTypeID() {
+        static int typeID = getNextTypeID();
+        return typeID;
+    }
+
+private:
+    static int getNextTypeID() {
+        static int currentTypeID = 0;
+        return ++currentTypeID;
+    }
+};

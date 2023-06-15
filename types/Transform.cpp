@@ -67,11 +67,8 @@ void Transform::update_matrix() {
         model_matrix = parent->model_matrix * model_matrix;
     }
 
-    auto start = children.start;
-    while (start) {
-        start->data->update_matrix();
-        start = start->next;
-    }
+    for(auto *child : children)
+        child->update_matrix();
 }
 
 bool Transform::is_dirty() const {

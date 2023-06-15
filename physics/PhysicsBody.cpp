@@ -5,6 +5,7 @@
 #include "PhysicsBody.h"
 #include "../Entity.h"
 
+
 void PhysicsBody::Update(const float &delta) {
     //run the position update
     if (is_fixed) return;
@@ -38,6 +39,9 @@ void PhysicsBody::Update(const float &delta) {
 
 }
 
-PhysicsBody::PhysicsBody(Vector gravity, float mass, PhysicsMaterial m, bool fixed) {
-
+PhysicsBody::PhysicsBody(Vector g, float m, PhysicsMaterial pm, bool f) {
+    gravity = g;
+    mass = m;
+    material = pm;
+    is_fixed = f;
 }
