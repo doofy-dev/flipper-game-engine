@@ -1,15 +1,17 @@
 #pragma once
-
-# define M_PIX2		6.28318530717958647692	/* pi */
+#define M_PIX2		6.28318530717958647692	/* pi */
 #include "furi.h"
+
+static const char* APP_NAME="FlipperGameEngine";
+
 void furi_log_print_format(int, const char*, const char*, ...);
 #define DEBUG_BUILD
 #ifdef DEBUG_BUILD
 #define check_pointer(X) check_ptr( X, __FILE__, __LINE__, __FUNCTION__)
-#define LOG_I(msg, ...) furi_log_print_format(FuriLogLevelInfo,  "FlipperGameEngine", "\033[1;32m[%s:%s():%i]\033[0m\t" msg, basename((char*) __FILE__), __func__, __LINE__, ##__VA_ARGS__)
-#define LOG_W(msg, ...) furi_log_print_format(FuriLogLevelWarn,  "FlipperGameEngine", "\033[1;32m[%s:%s():%i]\033[0m\t" msg, basename((char*) __FILE__), __func__, __LINE__, ##__VA_ARGS__)
-#define LOG_D(msg, ...) furi_log_print_format(FuriLogLevelDebug,  "FlipperGameEngine", "\033[1;32m[%s:%s():%i]\033[0m\t" msg, basename((char*) __FILE__), __func__, __LINE__, ##__VA_ARGS__)
-#define LOG_E(msg, ...) furi_log_print_format(FuriLogLevelError,  "FlipperGameEngine", "\033[1;32m[%s:%s():%i]\033[0m\t" msg, basename((char*) __FILE__), __func__, __LINE__, ##__VA_ARGS__)
+#define LOG_I(msg, ...) furi_log_print_format(FuriLogLevelInfo,  APP_NAME, "\033[1;32m[%s:%s():%i]\033[0m\t" msg, basename((char*) __FILE__), __func__, __LINE__, ##__VA_ARGS__)
+#define LOG_W(msg, ...) furi_log_print_format(FuriLogLevelWarn,  APP_NAME, "\033[1;32m[%s:%s():%i]\033[0m\t" msg, basename((char*) __FILE__), __func__, __LINE__, ##__VA_ARGS__)
+#define LOG_D(msg, ...) furi_log_print_format(FuriLogLevelDebug, APP_NAME, "\033[1;32m[%s:%s():%i]\033[0m\t" msg, basename((char*) __FILE__), __func__, __LINE__, ##__VA_ARGS__)
+#define LOG_E(msg, ...) furi_log_print_format(FuriLogLevelError, APP_NAME, "\033[1;32m[%s:%s():%i]\033[0m\t" msg, basename((char*) __FILE__), __func__, __LINE__, ##__VA_ARGS__)
 #else
 #define check_pointer(X) while(0)
 #define LOG_I(msg, ...) while(0)

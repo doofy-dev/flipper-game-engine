@@ -14,17 +14,18 @@ void Entity::Start() {
     for (auto *component: components) {
         component->Start();
     }
-
-    //store pointer to the collider for ease of access
-    auto *c = GetComponent<CircleCollider>();
-    if (c != nullptr) collider = c;
-    else collider = GetComponent<PolyCollider>();
+    if(collider)
+        collider->Start();
+    if(physicsBody)
+        physicsBody->Start();
 }
 
 Entity::~Entity() {
     LOG_D("Entity %s destroyed", name);
     if (physicsBody)
         delete physicsBody;
+    if (collider)
+        delete collider;
 
     auto start = components.start;
     while (start) {
@@ -72,4 +73,9 @@ Sprite *Entity::get_sprite() {
 void Entity::OnInput(InputKey key, InputState type) {
     for (auto *component: components)
         component->OnInput(key, type);
+}
+
+void Entity::StartComponent(ComponentBase *component) {
+    if (scene->is_started())
+        component->Start();
 }

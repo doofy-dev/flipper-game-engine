@@ -5,11 +5,17 @@
 #include "types.h"
 
 class PolyCollider;
-class CircleCollider : public Component<CircleCollider>, public Collider{
-    float radius=1;
+
+class CircleCollider : public Component<CircleCollider> {
+    float radius = 1;
 public:
     CircleCollider(float radius);
+
     CollisionInfo resolve(CircleCollider *other);
 
     CollisionInfo resolve(PolyCollider *other);
+
+    float get_radius() { return radius; }
+
+    void set_radius(float r) { radius = r; }
 };

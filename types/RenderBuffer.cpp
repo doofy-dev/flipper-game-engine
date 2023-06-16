@@ -5,7 +5,6 @@
 #include "RenderBuffer.h"
 #include "Sprite.h"
 #include "../Helpers.h"
-#include "../../defines.h"
 #include <gui/canvas_i.h>
 #include <u8g2_glue.h>
 
@@ -160,6 +159,7 @@ void RenderBuffer::draw_scaled(Sprite *const sprite, const Matrix &m) {
             break;
     }
 }
+//TODO: proper scaling
 #define newRender
 #ifdef newRender
 void RenderBuffer::draw_sprite(Sprite *const sprite, bool is_black, PixelColor draw_color, const Matrix &m) {
@@ -187,7 +187,6 @@ void RenderBuffer::draw_sprite(Sprite *const sprite, bool is_black, PixelColor d
 
         }
     }
-
 }
 
 #else

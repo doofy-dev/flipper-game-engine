@@ -13,6 +13,8 @@ protected:
 public:
     void set_entity(Entity *e);
 
+    Entity *get_entity() { return entity; }
+
     virtual ~ComponentBase() {
         LOG_D("Component cleared");
     }

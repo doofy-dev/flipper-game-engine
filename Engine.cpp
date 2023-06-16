@@ -56,6 +56,7 @@ void Engine::Stop() {
 }
 
 Engine::Engine(const char *name, uint8_t f, bool alwaysOn) {
+    APP_NAME = name;
     LOG_D("Starting %s", name);
     if (instance)
         LOG_E("Only one engine instance can be present!");

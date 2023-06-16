@@ -37,16 +37,46 @@ struct Vector {
         return Vector{x * other.x, y * other.y};
     }
 
+    Vector& operator+=(Vector const &other) {
+        x += other.x;
+        y += other.y;
+        return *this;
+    }
+
     Vector operator*(float other) {
         return Vector{x * other, y * other};
+    }
+
+    Vector& operator*=(Vector const &other) {
+        x *= other.x;
+        y *= other.y;
+        return *this;
+    }
+
+    Vector& operator*=(float other) {
+        x *= other;
+        y *= other;
+        return *this;
     }
 
     Vector operator/(Vector const &other) {
         return Vector{x / other.x, y / other.y};
     }
 
+    Vector& operator/=(Vector const &other) {
+        x /= other.x;
+        y /= other.y;
+        return *this;
+    }
+
     Vector operator/(float other) {
         return Vector{x / other, y / other};
+    }
+
+    Vector& operator/=(float other) {
+        x /= other;
+        y /= other;
+        return *this;
     }
 
     float magnitude() {
@@ -111,16 +141,16 @@ struct Vector {
         return {-y, x};
     }
 
-    Vector project(Vector const &lineA, Vector const &lineB, bool &success) {
+    Vector project(Vector const &lineA, Vector const &lineB, bool *success) {
         float distX = lineB.x - lineA.x;
         float distY = lineB.y - lineA.y;
         float len = sqrtf(distX * distX + distY * distY);
 
         float dot = ((x - lineA.x) * (lineB.x - lineA.x) + (y - lineA.y) * (lineB.y - lineA.y)) / (len * len);
-        success = false;
+        *success = false;
 
         if (dot < 0 || dot > 1) return {0, 0};
-        success = true;
+        *success = true;
 
         return {
                 lineA.x + (dot * (lineB.x - lineA.x)),

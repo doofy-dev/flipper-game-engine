@@ -18,4 +18,3 @@ struct PhysicsMaterial{
     float dynamic_friction;
 };
 
-class Collider{};
