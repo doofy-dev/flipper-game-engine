@@ -11,12 +11,13 @@ void Entity::SetScene(Scene *s) {
 }
 
 void Entity::Start() {
+    started = true;
     for (auto *component: components) {
         component->Start();
     }
-    if(collider)
+    if (collider)
         collider->Start();
-    if(physicsBody)
+    if (physicsBody)
         physicsBody->Start();
 }
 
@@ -76,6 +77,6 @@ void Entity::OnInput(InputKey key, InputState type) {
 }
 
 void Entity::StartComponent(ComponentBase *component) {
-    if (scene->is_started())
+    if (started)
         component->Start();
 }

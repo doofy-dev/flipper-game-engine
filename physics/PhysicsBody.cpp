@@ -4,6 +4,8 @@
 
 #include "PhysicsBody.h"
 #include "../Entity.h"
+#include "../Engine.h"
+#include "../types/Transform.h"
 
 
 void PhysicsBody::Update(const float &delta) {
@@ -39,9 +41,54 @@ void PhysicsBody::Update(const float &delta) {
 
 }
 
-PhysicsBody::PhysicsBody(Vector g, float m, PhysicsMaterial pm, bool f) {
+PhysicsBody::PhysicsBody(const Vector& g, float m, PhysicsMaterial pm, bool f): material(pm) {
     gravity = g;
     mass = m;
-    material = pm;
     is_fixed = f;
+    inertia=0;
+}
+
+void PhysicsBody::add_force(const Vector& force) {
+    velocity += force;
+}
+
+void PhysicsBody::fix_position(CollisionInfo *info) {
+/*TODO: move trigger check into the physics loop and send trigger event to components
+    also, create OnCollide(Transform *other, Vector point)
+ */
+    auto *a = (Collider*)info->a->entity->GetCollider();
+    auto *b = (Collider*)info->a->entity->GetCollider();
+    if((info->a->is_fixed && info->b->is_fixed) || (a->get_trigger() || b->get_trigger())) return;
+
+    if(!info->a->is_fixed){
+        info->a->entity->get_transform()->move({
+            info->normal.x * info->depth,
+            info->normal.y * info->depth
+        });
+    }else if(!info->b->is_fixed){
+        info->b->entity->get_transform()->move({
+                -info->normal.x * info->depth,
+                -info->normal.y * info->depth
+        });
+    }else{
+        Vector correctionVec = {
+                info->normal.x * info->depth * 0.5f,
+                info->normal.y * info->depth * 0.5f
+        };
+        info->a->entity->get_transform()->move({
+           correctionVec.x,correctionVec.y
+        });
+        info->b->entity->get_transform()->move({
+           -correctionVec.x,-correctionVec.y
+        });
+    }
+
+}
+
+void PhysicsBody::Start() {
+    entity->GetScene()->AddPhysicsBody(this);
+}
+
+void PhysicsBody::Destroy() {
+    entity->GetScene()->RemovePhysicsBody(this);
 }

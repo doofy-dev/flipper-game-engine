@@ -1,6 +1,7 @@
 #include "CircleCollider.h"
 #include "PolyCollider.h"
 #include "../Entity.h"
+#include "../Engine.h"
 
 CollisionInfo CircleCollider::resolve(CircleCollider *other) {
     CollisionInfo result;
@@ -32,4 +33,20 @@ CollisionInfo CircleCollider::resolve(PolyCollider *other) {
 }
 
 CircleCollider::CircleCollider(float r) : radius(r) {
+}
+
+void CircleCollider::Start() {
+    compute_area_and_mass();
+    entity->GetScene()->AddCollider(this);
+}
+
+void CircleCollider::compute_area_and_mass() {
+    float radSQ = radius * radius;
+    auto *pb = entity->GetComponent<PhysicsBody>();
+    pb->mass = M_PI * radSQ * pb->material.density;
+    pb->inertia =  (float) (0.5 * pb->mass * radSQ);
+}
+
+void CircleCollider::Destroy() {
+    entity->GetScene()->RemoveCollider(this);
 }

@@ -21,6 +21,7 @@ class Entity {
     Transform transform;
     List<ComponentBase> components;
     bool enabled = true;
+    bool started = false;
     Sprite *sprite;
     PhysicsBody *physicsBody;
     ComponentBase *collider;
@@ -42,11 +43,14 @@ public:
 
     void SetScene(Scene *s);
 
+    Scene *GetScene() { return scene; }
+
     template<typename T>
     void AddComponent() {
         T *t = new T();
         t->set_entity(this);
         components.add(t);
+        StartComponent(t);
     }
 
     template<typename T, typename... Args>
@@ -61,22 +65,29 @@ public:
         } else {
             components.add(t);
         }
+        StartComponent(t);
     }
 
     template<typename T>
     T *GetComponent() {
-
-        if (TypeRegistry::getTypeID<T>() == physicsBody->getTypeID())
-            return physicsBody;
-
-        if (TypeRegistry::getTypeID<T>() == collider->getTypeID())
-            return collider;
+        int type = TypeRegistry::getTypeID<T>();
+        if (type == physicsBody->getTypeID())
+            return (T *) (physicsBody);
+        if (type == collider->getTypeID())
+            return (T *) (collider);
+        if (type == TypeRegistry::getTypeID<PolyCollider>())
+            return (T *) (collider);
 
         for (ComponentBase *component: components) {
-            if (component->getTypeID() == TypeRegistry::getTypeID<T>())
+            if (component->getTypeID() == type)
                 return static_cast<T *>(component);
         }
+
         return nullptr;
+    }
+
+    ComponentBase *GetCollider() {
+        return collider;
     }
 
     template<typename T>
@@ -95,6 +106,8 @@ public:
                     item->data->Destroy();
                     delete item->data;
                     delete item;
+                    components.count--;
+
                     if (prev == components.start) {
                         components.start = temp;
                     } else {
@@ -105,11 +118,6 @@ public:
             }
             prev = item;
             item = temp;
-        }
-
-        for (ComponentBase *component: components) {
-            if (component->getTypeID() == TypeRegistry::getTypeID<T>())
-                return static_cast<T *>(component);
         }
     }
 

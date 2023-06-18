@@ -1,6 +1,7 @@
 #pragma once
 #define M_PIX2		6.28318530717958647692	/* pi */
 #include "furi.h"
+#define l_abs(x) ((x) < 0 ? -(x) : (x))
 
 static const char* APP_NAME="FlipperGameEngine";
 

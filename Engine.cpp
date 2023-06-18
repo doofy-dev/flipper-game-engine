@@ -27,10 +27,15 @@ Engine::~Engine() {
     }
 
     if (loaded) {
-        if (buffer_thread) {
+        if (buffer_thread_ptr) {
             thread_loop = false;
-            furi_thread_join(buffer_thread);
-            furi_thread_free(buffer_thread);
+            furi_thread_join(buffer_thread_ptr);
+            furi_thread_free(buffer_thread_ptr);
+        }
+        if (physics_thread_ptr) {
+            physics_loop = false;
+            furi_thread_join(physics_thread_ptr);
+            furi_thread_free(physics_thread_ptr);
         }
         if (notification_app)
             notification_message_block(notification_app, &sequence_display_backlight_enforce_auto);
@@ -86,9 +91,12 @@ Engine::Engine(const char *name, uint8_t f, bool alwaysOn) {
     if (alwaysOn)
         notification_message_block(notification_app, &sequence_display_backlight_enforce_on);
 
-    buffer_thread = furi_thread_alloc_ex(
+    buffer_thread_ptr = furi_thread_alloc_ex(
             "BackBufferThread", 1024, render_thread, buffer);
+    physics_thread_ptr = furi_thread_alloc_ex(
+            "PhysicsThread", 1024, physics_thread, this);
     loaded = true;
+    physics_loop = true;
     processing = true;
 }
 
@@ -121,14 +129,15 @@ void Engine::Start() {
     }
     thread_loop = true;
 
-    furi_thread_start(buffer_thread);
+    furi_thread_start(buffer_thread_ptr);
+    furi_thread_start(physics_thread_ptr);
     active_scene->Start();
     vTaskPrioritySet(static_cast<TaskHandle_t>(furi_thread_get_current_id()), FuriThreadPriorityIdle);
     last_tick = furi_get_tick();
 
     while (processing) {
         uint32_t tick = furi_get_tick();
-        if ((tick - last_tick) > 20) {
+        if ((tick - last_tick) > UPDATE_FPS) {
             buffer->reset();
             delta_tick = (tick - last_tick);
             active_scene->Update((float) delta_tick / 1000.0f, this);
@@ -208,4 +217,21 @@ void Engine::OnInput(Engine *inst, InputKey key, InputState type) {
 
 InputState Engine::GetInput(InputKey key) {
     return input_states[key];
+}
+
+int32_t Engine::physics_thread(void *ctx) {
+    UNUSED(ctx);
+    vTaskPrioritySet(static_cast<TaskHandle_t>(furi_thread_get_current_id()), FuriThreadPriorityIdle);
+    double tick = furi_get_tick(), currTick;
+    float delta;
+    while (instance->physics_loop) {
+        currTick = furi_get_tick();
+        delta = (float)(currTick - tick);
+        if (delta >= PHYSICS_TICKRATE) {
+            instance->active_scene->ProcessPhysics((float) delta / 1000.0f);
+            tick = currTick;
+        }
+        furi_thread_yield();
+    }
+    return 0;
 }

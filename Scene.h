@@ -11,11 +11,13 @@ class Engine;
 
 class Scene {
     List<Entity> entities;
+    List<ComponentBase> colliders;
+    List<PhysicsBody> physicsBodies;
     const char* name;
     bool started;
 
 public:
-    Scene(const char* name);
+    explicit Scene(const char* name);
     ~Scene();
 
     void Add(Entity *e);
@@ -24,5 +26,11 @@ public:
     void Update(const float &delta, Engine *engine);
     void ProcessPhysics(const float &time);
     void OnInput(InputKey key, InputState type);
-    bool is_started(){return started;}
+    bool is_started() const{return started;}
+
+    void AddCollider(ComponentBase *collider);
+    void RemoveCollider(ComponentBase *collider);
+
+    void AddPhysicsBody(PhysicsBody *physicsBody);
+    void RemovePhysicsBody(PhysicsBody *physicsBody);
 };

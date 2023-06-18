@@ -64,6 +64,17 @@ struct List {
         empty();
     }
 
+    void soft_clear(){
+        auto *item = start;
+        ListItem<T> *t;
+        while (item) {
+            t = item;
+            item = item->next;
+            delete t;
+        }
+        count = 0;
+    }
+
     void clear() {
         auto *item = start;
         ListItem<T> *t;
@@ -119,6 +130,31 @@ struct List {
                     check_pointer(s->next->data);
                     check_pointer(s->next);
                     delete s->next->data;
+                    delete s->next;
+                    s->next = n;
+                    count--;
+                    return;
+                }
+
+                s = s->next;
+            }
+        }
+    }
+
+    void soft_remove(T *data) {
+        if (!start || !data) return;
+
+        ListItem<T> *s = start;
+        if (s->data == data) {
+            auto tmp = start;
+            start = start->next;
+            delete tmp;
+            count--;
+        } else {
+            while (s) {
+                if (s->next && s->next->data == data) {
+                    auto n = s->next->next;
+                    check_pointer(s->next);
                     delete s->next;
                     s->next = n;
                     count--;

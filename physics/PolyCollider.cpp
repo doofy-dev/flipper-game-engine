@@ -1,6 +1,7 @@
 #include "PolyCollider.h"
 #include "../Entity.h"
 #include "CircleCollider.h"
+#include "../Engine.h"
 
 PolyCollider::PolyCollider(Vector *_corners, uint8_t _count) : count(_count) {
     for (uint8_t i = 0; i < _count; i++) {
@@ -120,4 +121,33 @@ PolyComputeResult PolyCollider::compute() {
     }
 
     return result;
+}
+
+void PolyCollider::Start() {
+    compute_area_and_mass();
+    entity->GetScene()->AddCollider(this);
+}
+
+void PolyCollider::compute_area_and_mass() {
+    auto *pb = entity->GetComponent<PhysicsBody>();
+    pb->mass = 0;
+    pb->inertia = 0;
+
+    Vector v1, v2;
+    float sum1 = 0, sum2 = 0, a, b;
+    for (uint8_t i = 0; i < count; i++) {
+        v1 = corners[i];
+        v2 = corners[(i + 1) % count];
+        pb->mass += v1.cross(v2);
+        a = v2.cross(v1);
+        b = v1.dot(v1) + v1.dot(v2) + v2.dot(v2);
+        sum1 += a * b;
+        sum2 += a;
+    }
+    pb->mass = (float) (0.5f * l_abs(pb->mass) * pb->material.density);
+    pb->inertia = (float) ((pb->mass * sum1) / (6.0 * sum2));
+}
+
+void PolyCollider::Destroy() {
+    entity->GetScene()->RemoveCollider(this);
 }

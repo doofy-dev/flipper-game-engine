@@ -7,6 +7,9 @@
 #include "types/Render.h"
 #include "Scene.h"
 #include "types/RenderBuffer.h"
+#define PHYSICS_TICKRATE 33.3333333333f
+#define UPDATE_FPS 20
+
 
 class Engine {
     const char *app_name;
@@ -21,7 +24,8 @@ class Engine {
 
     RenderBuffer *buffer;
 
-    FuriThread *buffer_thread;
+    FuriThread *buffer_thread_ptr;
+    FuriThread *physics_thread_ptr;
     FuriMutex *render_mutex;
 
     FuriPubSub *input;
@@ -30,6 +34,7 @@ class Engine {
     bool loaded = false;
     bool processing = false;
     bool thread_loop = false;
+    bool physics_loop = false;
     static Engine *instance;
 
     List<SpriteMap> sprite_map;
@@ -51,6 +56,7 @@ public:
     Sprite * LoadSprite(Icon *icon);
 
     static int32_t render_thread(void *ctx);
+    static int32_t physics_thread(void *ctx);
 
     static Engine *get_instance() { return instance; }
 
