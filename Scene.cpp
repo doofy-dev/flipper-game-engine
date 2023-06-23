@@ -78,9 +78,9 @@ void Scene::RemovePhysicsBody(PhysicsBody *physicsBody) {
     physicsBodies.soft_remove(physicsBody);
 }
 
-void Scene::ProcessPhysics(const float &time) {
+void Scene::ProcessPhysics(const double &time) {
     for (PhysicsBody *physicsBody: physicsBodies) {
-        physicsBody->Update(time);
+        physicsBody->Process(time);
     }
     auto outerBegin = colliders.begin();
     auto outerEnd = colliders.end();
@@ -89,13 +89,97 @@ void Scene::ProcessPhysics(const float &time) {
         int typeA = colliderA->getTypeID();
         auto innerBegin = colliders.begin();
         auto innerEnd = colliders.end();
-        if(innerBegin == innerEnd) {
+        if (innerBegin == innerEnd) {
             continue;
         }
-        innerBegin++;
         for (auto innerIt = innerBegin; innerIt != innerEnd; ++innerIt) {
             ComponentBase *colliderB = *innerIt;
-            int tpyeB = colliderB->getTypeID();
+            if(colliderA == colliderB) continue;
+            int typeB = colliderB->getTypeID();
+            if (typeA == TypeRegistry::getTypeID<CircleCollider>() &&
+                typeB == TypeRegistry::getTypeID<CircleCollider>()) {
+                handle_collision((CircleCollider *) colliderA, (CircleCollider *) colliderB, time);
+            }
+         /*   if (typeA == TypeRegistry::getTypeID<CircleCollider>() &&
+                typeB == TypeRegistry::getTypeID<PolyCollider>()) {
+                handle_collision((PolyCollider *) colliderB, (CircleCollider *) colliderA, time);
+            }*/
+            if (typeA == TypeRegistry::getTypeID<PolyCollider>() &&
+                typeB == TypeRegistry::getTypeID<CircleCollider>()) {
+                handle_collision((PolyCollider *) colliderA, (CircleCollider *) colliderB, time);
+            }
+            if (typeA == TypeRegistry::getTypeID<PolyCollider>() &&
+                typeB == TypeRegistry::getTypeID<PolyCollider>()) {
+                handle_collision((PolyCollider *) colliderA, (PolyCollider *) colliderB, time);
+            }
         }
     }
+}
+
+void Scene::handle_collision(CircleCollider *colliderA, CircleCollider *colliderB, const double &time) {
+    UNUSED(time);
+    CollisionInfo info = colliderA->resolve(colliderB);
+    if (!info.is_collided) return;
+    if (colliderA->get_trigger()) {
+        colliderA->get_entity()->OnCollide(colliderB->get_entity()->get_transform());
+        return;
+    }
+    if (colliderB->get_trigger()) {
+        colliderB->get_entity()->OnCollide(colliderA->get_entity()->get_transform());
+        return;
+    }
+    if ((info.a->is_fixed && info.b->is_fixed)) return;
+    LOG_D("Collide cc %s %s", info.a->get_entity()->getName(), info.b->get_entity()->getName());
+    PhysicsBody::fix_position(&info);
+/*    PhysicsBody::resolve_bounce(&info);
+    PhysicsBody::resolve_friction(&info, time);*/
+}
+
+void Scene::handle_collision(PolyCollider *colliderA, CircleCollider *colliderB, const double &time) {
+    UNUSED(time);
+    CollisionInfo info = colliderA->resolve(colliderB);
+    if (!info.is_collided) {
+        return; }
+    if (colliderA->get_trigger()) {
+        colliderA->get_entity()->OnCollide(colliderB->get_entity()->get_transform());
+        return;
+    }
+    if (colliderB->get_trigger()) {
+        colliderB->get_entity()->OnCollide(colliderA->get_entity()->get_transform());
+        return;
+    }
+    if ((info.a->is_fixed && info.b->is_fixed)) return;
+    LOG_D("Collide pc %s %s %f %f %f %f", info.a->get_entity()->getName(), info.b->get_entity()->getName(),
+          (double)info.a->get_entity()->get_transform()->world_position().x,
+          (double)info.a->get_entity()->get_transform()->world_position().y,
+          (double)info.b->get_entity()->get_transform()->world_position().x,
+          (double)info.b->get_entity()->get_transform()->world_position().y
+          );
+
+    PhysicsBody::fix_position(&info);
+    info.a->check_sleep();
+    info.b->check_sleep();
+    if(info.need_bounce)
+        PhysicsBody::resolve_bounce(&info);
+/*    PhysicsBody::resolve_friction(&info, time);*/
+}
+
+void Scene::handle_collision(PolyCollider *colliderA, PolyCollider *colliderB, const double &time) {
+    UNUSED(time);
+    CollisionInfo info = colliderA->resolve(colliderB);
+    if (!info.is_collided) return;
+    if (colliderA->get_trigger()) {
+        colliderA->get_entity()->OnCollide(colliderB->get_entity()->get_transform());
+        return;
+    }
+    if (colliderB->get_trigger()) {
+        colliderB->get_entity()->OnCollide(colliderA->get_entity()->get_transform());
+        return;
+    }
+    if ((info.a->is_fixed && info.b->is_fixed)) return;
+    LOG_D("Collide pp %s %s", info.a->get_entity()->getName(), info.b->get_entity()->getName());
+
+    PhysicsBody::fix_position(&info);
+/*    PhysicsBody::resolve_bounce(&info);
+    PhysicsBody::resolve_friction(&info, time);*/
 }

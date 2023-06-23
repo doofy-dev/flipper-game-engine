@@ -46,7 +46,7 @@ public:
     Scene *GetScene() { return scene; }
 
     template<typename T>
-    void AddComponent() {
+    void add_component() {
         T *t = new T();
         t->set_entity(this);
         components.add(t);
@@ -54,7 +54,7 @@ public:
     }
 
     template<typename T, typename... Args>
-    void AddComponent(Args &&... args) {
+    void add_component(Args &&... args) {
         ComponentBase *t = new T(args...);
         t->set_entity(this);
         if (t->getTypeID() == TypeRegistry::getTypeID<PhysicsBody>()) {
@@ -69,7 +69,7 @@ public:
     }
 
     template<typename T>
-    T *GetComponent() {
+    T *get_component() {
         int type = TypeRegistry::getTypeID<T>();
         if (type == physicsBody->getTypeID())
             return (T *) (physicsBody);
@@ -121,13 +121,18 @@ public:
         }
     }
 
+    void OnCollide(Transform *other);
+
     void set_active(bool active);
 
     bool is_active() const;
+    bool is_started() const;
 
     void set_sprite(const Icon *icon);
 
     Sprite *get_sprite();
 
     PhysicsBody *getPhysicsBody() { return physicsBody; }
+
+    const char *getName() { return name; }
 };

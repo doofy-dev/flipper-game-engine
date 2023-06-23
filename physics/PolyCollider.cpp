@@ -11,13 +11,17 @@ PolyCollider::PolyCollider(Vector *_corners, uint8_t _count) : count(_count) {
 
 CollisionInfo PolyCollider::resolve(CircleCollider *other) {
     CollisionInfo result;
+    if (!physicsBody->is_loaded())
+        return result;
+
     Vector circlePos = other->get_entity()->get_transform()->world_position();
     auto polyInfo = compute();
 
     float dist = polyInfo.center.distance(circlePos);
 
-    if (dist > (other->get_radius() + polyInfo.radius))
+    if (dist > (other->get_radius() + polyInfo.radius)) {
         return result;
+    }
 
     int c = count;
 
@@ -27,20 +31,26 @@ CollisionInfo PolyCollider::resolve(CircleCollider *other) {
     bool success = false;
 
     for (uint8_t i = 0; i < c; i++) {
-        va = corners[i];
-        vb = corners[(i + 1) % count];
+        va = polyInfo.corners[i];
+        vb = polyInfo.corners[(i + 1) % count];
         projected = circlePos.project(va, vb, &success);
+//        LOG_D("Check %f %f - %f %f to %f %f rad %f", (double)va.x, (double)va.y, (double)vb.x, (double)vb.y, (double)circlePos.x, (double)circlePos.y, (double)other->get_radius());
         if (success) {
             float length = projected.distance(circlePos);
-            if (length > other->get_radius())
+            if (length > other->get_radius()) {
                 continue;
+            }
 
-            result.depth = other->get_radius() - length;
+            result.depth = -(other->get_radius() - length);
             result.is_collided = true;
+            result.need_bounce = physicsBody->velocity.magnitude() > PHYSICS_BOUNCE_MARGIN;
             result.a = this->entity->getPhysicsBody();
             result.b = other->get_entity()->getPhysicsBody();
             result.normal = (circlePos - projected).normalized();
-
+            if(result.need_bounce) {
+                if (physicsBody->sleeping) physicsBody->wake_up();
+                if (other->physicsBody->sleeping) other->physicsBody->wake_up();
+            }
             return result;
         }
     }
@@ -49,6 +59,8 @@ CollisionInfo PolyCollider::resolve(CircleCollider *other) {
 
 CollisionInfo PolyCollider::resolve(PolyCollider *other) {
     CollisionInfo result;
+    if (!physicsBody->is_loaded())
+        return result;
     auto polyInfo1 = compute();
     auto polyInfo2 = other->compute();
 
@@ -63,11 +75,11 @@ CollisionInfo PolyCollider::resolve(PolyCollider *other) {
     uint8_t bCount = other->count == 2 ? 1 : other->count;
 
     for (uint8_t i = 0; i < aCount; i++) {
-        A1 = corners[i];
-        A2 = corners[(i + 1) % count];
+        A1 = polyInfo1.corners[i];
+        A2 = polyInfo1.corners[(i + 1) % count];
         for (uint8_t j = 0; j < bCount; j++) {
-            B1 = other->corners[j];
-            B2 = other->corners[(j + 1) % other->count];
+            B1 = polyInfo2.corners[j];
+            B2 = polyInfo2.corners[(j + 1) % other->count];
 
             edgeA = A2 - A1;
             edgeB = B2 - B1;
@@ -84,8 +96,17 @@ CollisionInfo PolyCollider::resolve(PolyCollider *other) {
             if (s < 0 || s > 1) continue;
 
             result.is_collided = true;
+            result.need_bounce = physicsBody->velocity.magnitude() > PHYSICS_BOUNCE_MARGIN;
             result.normal = {edgeA.y, -edgeA.x};
             result.normal.normalize();
+            result.a = entity->get_component<PhysicsBody>();
+            result.b = other->get_entity()->get_component<PhysicsBody>();
+
+
+            if(result.need_bounce) {
+                if (physicsBody->sleeping) physicsBody->wake_up();
+                if (other->physicsBody->sleeping) other->physicsBody->wake_up();
+            }
 
             projected = A1 + (result.normal * t * edgeA);
             result.depth = projected.magnitude();
@@ -124,12 +145,13 @@ PolyComputeResult PolyCollider::compute() {
 }
 
 void PolyCollider::Start() {
+    physicsBody = entity->get_component<PhysicsBody>();
     compute_area_and_mass();
     entity->GetScene()->AddCollider(this);
 }
 
 void PolyCollider::compute_area_and_mass() {
-    auto *pb = entity->GetComponent<PhysicsBody>();
+    auto *pb = entity->get_component<PhysicsBody>();
     pb->mass = 0;
     pb->inertia = 0;
 

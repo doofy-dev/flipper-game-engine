@@ -7,7 +7,10 @@
 #include "types/Render.h"
 #include "Scene.h"
 #include "types/RenderBuffer.h"
-#define PHYSICS_TICKRATE 33.3333333333f
+#define PHYSICS_SPEED 0.5
+#define PHYSICS_BOUNCE_MARGIN 0.05
+#define PHYSICS_SLEEP_MARGIN 0.01
+#define PHYSICS_TICKRATE 33.3333333333
 #define UPDATE_FPS 20
 
 

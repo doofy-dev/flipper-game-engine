@@ -25,8 +25,20 @@ struct Vector {
         return Vector({x + other.x, y + other.y});
     }
 
+    Vector &operator+=(Vector const &other) {
+        x += other.x;
+        y += other.y;
+        return *this;
+    }
+
     Vector operator-(Vector const &other) {
         return Vector{x - other.x, y - other.y};
+    }
+
+    Vector &operator-=(Vector const &other) {
+        x -= other.x;
+        y -= other.y;
+        return *this;
     }
 
     Vector operator-(Vector const &other) const {
@@ -37,23 +49,18 @@ struct Vector {
         return Vector{x * other.x, y * other.y};
     }
 
-    Vector& operator+=(Vector const &other) {
-        x += other.x;
-        y += other.y;
-        return *this;
-    }
 
     Vector operator*(float other) {
         return Vector{x * other, y * other};
     }
 
-    Vector& operator*=(Vector const &other) {
+    Vector &operator*=(Vector const &other) {
         x *= other.x;
         y *= other.y;
         return *this;
     }
 
-    Vector& operator*=(float other) {
+    Vector &operator*=(float other) {
         x *= other;
         y *= other;
         return *this;
@@ -63,7 +70,7 @@ struct Vector {
         return Vector{x / other.x, y / other.y};
     }
 
-    Vector& operator/=(Vector const &other) {
+    Vector &operator/=(Vector const &other) {
         x /= other.x;
         y /= other.y;
         return *this;
@@ -73,7 +80,7 @@ struct Vector {
         return Vector{x / other, y / other};
     }
 
-    Vector& operator/=(float other) {
+    Vector &operator/=(float other) {
         x /= other;
         y /= other;
         return *this;
@@ -142,6 +149,21 @@ struct Vector {
     }
 
     Vector project(Vector const &lineA, Vector const &lineB, bool *success) {
+        Vector AB = lineB - lineA;
+        Vector AC = *this - lineA;
+
+        float k = AC.dot(AB) / AB.dot(AB);
+        if (k < 0 || k > 1) {
+            *success = false;
+            return {};
+        }
+        *success = true;
+        return {
+            k * AB.x + lineA.x,
+            k * AB.y + lineA.y
+        };
+/*
+
         float distX = lineB.x - lineA.x;
         float distY = lineB.y - lineA.y;
         float len = sqrtf(distX * distX + distY * distY);
@@ -155,7 +177,7 @@ struct Vector {
         return {
                 lineA.x + (dot * (lineB.x - lineA.x)),
                 lineA.y + (dot * (lineB.y - lineA.y))
-        };
+        };*/
     }
 
     static Vector Lerp(Vector const &start, Vector const &end, float time) {

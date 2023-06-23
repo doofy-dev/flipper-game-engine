@@ -38,6 +38,7 @@ public:
     void set_position(const Vector &p);
 
     void rotate(float amount);
+    void rotate_deg(float amount);
 
     void set_rotation(float amount);
 

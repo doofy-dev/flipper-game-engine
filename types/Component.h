@@ -5,6 +5,7 @@
 #include "../Helpers.h"
 
 class Entity;
+class Transform;
 
 class ComponentBase {
 protected:
@@ -17,6 +18,9 @@ public:
 
     virtual ~ComponentBase() {
         LOG_D("Component cleared");
+    }
+    virtual void OnCollide(Transform* other) {
+        UNUSED(other);
     }
 
     virtual void Start() {}

@@ -67,8 +67,9 @@ void Transform::update_matrix() {
         model_matrix = parent->model_matrix * model_matrix;
     }
 
-    for(auto *child : children)
+    for(auto *child : children) {
         child->update_matrix();
+    }
 }
 
 bool Transform::is_dirty() const {
@@ -85,4 +86,8 @@ Entity *Transform::get_entity() {
 
 Matrix Transform::get_matrix() {
     return model_matrix;
+}
+
+void Transform::rotate_deg(float amount) {
+    rotate(amount * DEG_2_RAD);
 }

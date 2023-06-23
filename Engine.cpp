@@ -7,8 +7,17 @@
 Engine *Engine::instance = nullptr;
 
 Engine::~Engine() {
-    LOG_D("Stopping render thread");
+    LOG_D("Stopping engine");
     check_pointer(active_scene);
+    LOG_D("Removing scene");
+
+    if (physics_thread_ptr) {
+        LOG_D("Stopping physics_thread_ptr");
+        physics_loop = false;
+        furi_thread_join(physics_thread_ptr);
+        furi_thread_free(physics_thread_ptr);
+    }
+
     if (active_scene)
         delete active_scene;
 
@@ -28,19 +37,16 @@ Engine::~Engine() {
 
     if (loaded) {
         if (buffer_thread_ptr) {
+            LOG_D("Stopping buffer_thread_ptr");
             thread_loop = false;
             furi_thread_join(buffer_thread_ptr);
             furi_thread_free(buffer_thread_ptr);
-        }
-        if (physics_thread_ptr) {
-            physics_loop = false;
-            furi_thread_join(physics_thread_ptr);
-            furi_thread_free(physics_thread_ptr);
         }
         if (notification_app)
             notification_message_block(notification_app, &sequence_display_backlight_enforce_auto);
 
     }
+
     check_pointer(buffer);
     if (buffer)
         delete buffer;
@@ -223,12 +229,16 @@ int32_t Engine::physics_thread(void *ctx) {
     UNUSED(ctx);
     vTaskPrioritySet(static_cast<TaskHandle_t>(furi_thread_get_current_id()), FuriThreadPriorityIdle);
     double tick = furi_get_tick(), currTick;
-    float delta;
+    double delta;
     while (instance->physics_loop) {
         currTick = furi_get_tick();
-        delta = (float)(currTick - tick);
-        if (delta >= PHYSICS_TICKRATE) {
-            instance->active_scene->ProcessPhysics((float) delta / 1000.0f);
+        delta =(currTick - tick);
+        if (delta >= (double)(PHYSICS_TICKRATE * PHYSICS_SPEED)) {
+            instance->active_scene->ProcessPhysics(
+//                    0.33
+                    (delta / (double)(100/PHYSICS_SPEED))
+//0.000000000000000001
+                    );
             tick = currTick;
         }
         furi_thread_yield();

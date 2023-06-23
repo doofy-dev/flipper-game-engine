@@ -15,7 +15,7 @@ struct PolyComputeResult {
 
 class CircleCollider;
 
-class PolyCollider : public Component<PolyCollider>, public Collider{
+class PolyCollider : public Collider<PolyCollider>{
     Vector corners[MAX_POLY_SIZE];
     uint8_t count;
 public:
@@ -27,9 +27,9 @@ public:
 
     void compute_area_and_mass() override;
 
-    CollisionInfo resolve(CircleCollider *other);
+    CollisionInfo resolve(CircleCollider *other) override;
 
-    CollisionInfo resolve(PolyCollider *other);
+    CollisionInfo resolve(PolyCollider *other) override;
 
     PolyComputeResult compute();
 };

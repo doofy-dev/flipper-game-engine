@@ -9,6 +9,7 @@ struct CollisionInfo{
     Vector normal = {0,0};
     float depth = 0;
     bool is_collided = false;
+    bool need_bounce = false;
 };
 
 struct PhysicsMaterial{

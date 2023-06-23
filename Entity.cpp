@@ -1,10 +1,7 @@
 #include "Entity.h"
 #include "Engine.h"
 #include "Scene.h"
-#include <furi.h>
 #include "types/Sprite.h"
-#include "physics/CircleCollider.h"
-#include "physics/PolyCollider.h"
 
 void Entity::SetScene(Scene *s) {
     scene = s;
@@ -15,6 +12,8 @@ void Entity::Start() {
     for (auto *component: components) {
         component->Start();
     }
+    if(transform.is_dirty())
+        transform.update_matrix();
     if (collider)
         collider->Start();
     if (physicsBody)
@@ -22,12 +21,14 @@ void Entity::Start() {
 }
 
 Entity::~Entity() {
-    LOG_D("Entity %s destroyed", name);
+    LOG_D("Removing physicsbody for %s", name);
     if (physicsBody)
         delete physicsBody;
+    LOG_D("Removing collider for %s", name);
     if (collider)
         delete collider;
 
+    LOG_D("Removing components for %s", name);
     auto start = components.start;
     while (start) {
         auto *t = start->next;
@@ -39,6 +40,7 @@ Entity::~Entity() {
         delete start;
         start = t;
     }
+    LOG_D("Entity %s destroyed", name);
 }
 
 void Entity::Update(const float &delta) {
@@ -46,8 +48,9 @@ void Entity::Update(const float &delta) {
     for (auto *component: components) {
         if (component->is_enabled())
             component->Update(delta);
-        if (transform.is_dirty())
-            transform.update_matrix();
+    }
+    if (transform.is_dirty()) {
+        transform.update_matrix();
     }
 }
 
@@ -79,4 +82,15 @@ void Entity::OnInput(InputKey key, InputState type) {
 void Entity::StartComponent(ComponentBase *component) {
     if (started)
         component->Start();
+}
+
+void Entity::OnCollide(Transform *other) {
+    for (auto *component: components) {
+        if (component->is_enabled())
+            component->OnCollide(other);
+    }
+}
+
+bool Entity::is_started() const {
+    return started;
 }
